@@ -29,11 +29,11 @@ function [mpc] = setReAF(mpc, fuelAf, fuelType, verbose)
     	if any(afIdx)
             mpc.availability_factor(i, :) = fuelAf{afIdx, 2 : end};    		
         else
-            fprintf('%s at bus %d is set with default AF. \n', fuelType, mpc.gen(i, 1));    	
+            fprintf('%s at bus %d is set with default AF\n', fuelType, mpc.gen(i, 1));    	
         end    	
     end	
 
     % Debug information
     if verbose == 1
-    	fprintf('Availability factors for existing %s are set.\n', fuelType);
+    	fprintf('Availability factors for existing %s are set\n', fuelType);
     end

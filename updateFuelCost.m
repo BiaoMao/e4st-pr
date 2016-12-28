@@ -21,7 +21,7 @@ function [mpc] = updataFuelCost(mpc, yearInfo, year, verbose)
 	% For coal
 	idx = strcmp(mpc.genfuel, 'coal');
 	if isfield(mpc, 'newgen')
-		idx = idx & newgen ~= 1; % for old gen
+		idx = idx & mpc.newgen ~= 1; % for non-new generators
 	end
 	delta = yearInfo{'coalPrice', idxYear} - yearInfo{'coalPrice', idxYear - 1};	
     mpc.gencost(idx, 5) = mpc.gencost(idx, 5) + ...
@@ -33,7 +33,7 @@ function [mpc] = updataFuelCost(mpc, yearInfo, year, verbose)
     % For oil
 	idx = strcmp(mpc.genfuel, 'oil');
 	if isfield(mpc, 'newgen')
-		idx = idx & newgen ~= 1; % for old gen
+		idx = idx & mpc.newgen ~= 1; % for non-new generator
 	end
 	delta = yearInfo{'oilPrice', idxYear} - yearInfo{'oilPrice', idxYear - 1};
     mpc.gencost(idx, 5) = mpc.gencost(idx, 5) + ...
@@ -46,7 +46,7 @@ function [mpc] = updataFuelCost(mpc, yearInfo, year, verbose)
     % For ng
 	idx = strcmp(mpc.genfuel, 'ng') & strcmp(mpc.genfuel, 'ngcc') & strcmp(mpc.genfuel, 'ngt');
 	if isfield(mpc, 'newgen')
-		idx = idx & newgen ~= 1; % for old gen
+		idx = idx & mpc.newgen ~= 1; % for non-new generator
 	end
 	delta = yearInfo{'ngPrice', idxYear} - yearInfo{'ngPrice', idxYear - 1};
     mpc.gencost(idx, 5) = mpc.gencost(idx, 5) + ...

@@ -19,15 +19,6 @@ function [results, f, success, info, et, g, jac, xr, pimul] = e4st_solve(varargi
 %       e4st_solve(mpc, offer, contab, A, l, u)
 %       e4st_solve(mpc, offer, contab, A, l, u, mpopt)
 %       e4st_solve(mpc, offer, contab, A, l, u, mpopt, N, fparm, H, Cw)
-%       e4st_solve(baseMVA, bus, gen, branch, areas, gencost, offer, contab)
-%       e4st_solve(baseMVA, bus, gen, branch, areas, gencost, offer, contab, ...
-%                                   mpopt)
-%       e4st_solve(baseMVA, bus, gen, branch, areas, gencost, offer, contab, ...
-%                                   A, l, u)
-%       e4st_solve(baseMVA, bus, gen, branch, areas, gencost, offer, contab, ...
-%                                   A, l, u, mpopt)
-%       e4st_solve(baseMVA, bus, gen, branch, areas, gencost, offer, contab, ...
-%                                   A, l, u, mpopt, N, fparm, H, Cw)
 %
 %   mpc is a MATPOWER case file or case struct with the fields baseMVA, bus,
 %   gen, branch, and (optionally) areas. It may also include a 'contingencies'
@@ -127,8 +118,8 @@ function [results, f, success, info, et, g, jac, xr, pimul] = e4st_solve(varargi
 
 [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, contab, ...
     Au, lbu, ubu, mpopt, N, fparm, H, Cw, HAVE_Q, ...
-    maxbuild_map, maxbuild_capacity, avail_fac, ...
-    toc_map, toc_cap, toc_coeff, toc_type, dr2aap_idx, dr2aap_factor] = e4st_args(varargin{:});
+    caplim_map, caplim_max, caplim_min, avail_fac, ...
+    toc_map, toc_cap, toc_coeff, toc_type] = e4st_args(varargin{:});
 
 if size(N, 1) > 0
   if size(N, 1) ~= size(fparm, 1) || size(N, 1) ~= size(H,1) || ...
@@ -244,8 +235,8 @@ if ~isempty(iflims)
   ifmap(:, 2) = d .* e2i(br);
   ifmap(ifmap(:, 2) == 0, :) = [];  %% delete branches that are out
 end
-if ~isempty(maxbuild_map)
-  maxbuild_map = maxbuild_map(:, base_on_gen);
+if ~isempty(caplim_map)
+  caplim_map = caplim_map(:, base_on_gen);
 end
 if ~isempty(avail_fac)
   avail_fac = avail_fac(base_on_gen, :);        % reduce to committed gens
@@ -363,8 +354,8 @@ else
   [tmp, inv_gencost_ord] = sort([igen; igen+ng]);
 end
 [gencost_p, gencost_q] = pqcost(gencost, ng);
-if ~isempty(maxbuild_map)
-  maxbuild_map = maxbuild_map(:, igen);
+if ~isempty(caplim_map)
+  caplim_map = caplim_map(:, igen);
 end
 avail_fac = avail_fac(igen, :);
 if ~isempty(toc_map)
@@ -439,9 +430,11 @@ ndc(1) = size(dcline, 1);
 if ~isempty(iflims)
     nif(1) = size(iflims.lims, 1);
     nifm(1) = size(ifmap, 1);
+    ifidmax(1) = max(ifmap(:, 1));
 else
     nif(1) = 0;
     nifm(1) = 0;
+    ifidmax(1) = 0;
 end
 Augmented_bus = bus;
 Augmented_branch = branch;
@@ -471,6 +464,7 @@ for k = 1:nc
   ndc(k+1) = ndc(1);
   nif(k+1) = nif(1);
   nifm(k+1) = nifm(1);
+  ifidmax(k+1) = ifidmax(k) + ifidmax(1);
 
   % apply the modifications
   mpck = struct('bus', bus, 'gen', gen, 'branch', branch, 'gencost', gencost);
@@ -516,7 +510,7 @@ for k = 1:nc
   if ~isempty(iflims)
     ifmapwork = ifmap;          %% assume no changes per contingency
     iflimswork = iflims.lims;   %% assume no changes per contingency
-    ifbastmp = sum(nif(1:k));  % total # interfaces in base and previous flows
+    ifbastmp = ifidmax(k);      %% max if id num in previous flows
     ifmapwork(:, 1)  = ifmapwork(:, 1) + ifbastmp;
     iflimswork(:, 1) = iflimswork(:, 1) + ifbastmp;
     e2i = zeros(size(mpck.branch, 1), 1);
@@ -888,25 +882,33 @@ l4B = ActiveContractMin / baseMVA;
 u4B = ActiveContractMax / baseMVA;
 lc4Bbas = lc4end + 1;
 lc4Bend = lc4Bbas + ng(1) - 1;
-% maxbuild limits
-if ~isempty(maxbuild_map)
-  nmbb = size(maxbuild_map, 1);     %% number of maxbuild bounds
-  A4C = sparse(nmbb, nvars);
-  A4C(:, (rPpbas:rPpend)') = maxbuild_map;
-%   [ii, jj, ss] = find(maxbuild_map);
-%   A4C = sparse(ii, jj + rPpbas-1, ss, nmbb, nvars);
-  l4C = zeros(nmbb, 1);
-  u4C = maxbuild_capacity / baseMVA;
+% capacity limits
+if ~isempty(caplim_map)
+  nclb = size(caplim_map, 1);     %% number of caplim bounds
+  A4C = sparse(nclb, nvars);
+  A4C(:, (rPpbas:rPpend)') = caplim_map;
+%   [ii, jj, ss] = find(caplim_map);
+%   A4C = sparse(ii, jj + rPpbas-1, ss, nclb, nvars);
+  if isempty(caplim_min)
+    l4C = -Inf(nclb, 1);
+  else
+    l4C = caplim_min / baseMVA;
+  end
+  if isempty(caplim_max)
+    u4C = Inf(nclb, 1);
+  else
+    u4C = caplim_max / baseMVA;
+  end
 else
-  nmbb = 0;
-  A4C = sparse(nmbb, nvars);
+  nclb = 0;
+  A4C = sparse(nclb, nvars);
   l4C = [];
   u4C = [];
 end
 lc4Cbas = lc4Bend + 1;
-lc4Cend = lc4Cbas + nmbb - 1;
+lc4Cend = lc4Cbas + nclb - 1;
 
-% The increment variables from the base case for generators active in kth 
+% The increment variables from the base case for generators active in kth
 % flow cannot be negative. 0 <= dPp
 A5 = sparse(0,0); l5 = []; u5 = [];
 for k = 1:nc+1
@@ -917,7 +919,7 @@ for k = 1:nc+1
   u5 = [ u5; 
          Inf(length(ii), 1) ];
 end
-lc5bas = lc4Bend + 1;
+lc5bas = lc4Cend + 1;
 lc5end = lc5bas + size(A5, 1) - 1;
 % The positive reserve variables (times availability factors) are larger
 % than all increment variables in all flows. 0 <= avail_fac * rPp - dPp.
@@ -1177,42 +1179,14 @@ if ~isempty(toc_map)
   lc21bas = lc20end + 1;
   lc21end = lc21bas + size(A21,1) - 1;
 else
+  lc21bas = lc20end + 1;    lc21end = lc20end;
   A21 = sparse(0,0); l21 = []; u21 = [];
 end
 
-% demand response to annual average price
-if ~isempty(dr2aap_idx)
-  n_load_cons = length(dr2aap_idx) * nc;
-  A22 = spalloc(n_load_cons, nvars, n_load_cons * 2); % pre-allocate memory
-  idx_row = 1;
-  for i = dr2aap_idx
-    idx_area = bus(bus(:, 1) == gen(i, 1), 7); % bus area
-    this_load_af = dr2aap_factor(:, idx_area);  
-    idx_new = igen == i; % convert the idx to internal  index of A, l, u
-    for k = 1 : nc
-      idxSpan1 = (pgbas(k):pgend(k))';
-      idxSpan2 = (pgbas(k + 1):pgend(k + 1))';
-      idxCons1 = idxSpan1(idx_new);
-      idxCons2 = idxSpan2(idx_new);
-      coeff1 = 1 / this_load_af(k);
-      coeff2 = 1 / this_load_af(k + 1);
-      % coeff1 = 1;
-      % coeff2 = 1;
-      A22(idx_row, idxCons1) = coeff1;
-      A22(idx_row, idxCons2) = -coeff2;
-      idx_row = idx_row + 1;
-    end
-  end
-  l22 = 0 * ones(n_load_cons, 1);
-  u22 = 0 * ones(n_load_cons, 1);
-else
-  A22 = sparse(0,0); l22 = []; u22 = [];
-end
-
 % I know, stacking sparse matrices row-wise...
-Acoop = [ A1; A2; A3; A4; A4B; A4C; A5; A6; A7B; A8; A9; A10; A11; A12; A13; A14; A14B; A15; A16; A18; A19; A20; A21; A22];
-lcoop = [ l1; l2; l3; l4; l4B; l4C; l5; l6; l7B; l8; l9; l10; l11; l12; l13; l14; l14B; l15; l16; l18; l19; l20; l21; l22];
-ucoop = [ u1; u2; u3; u4; u4B; u4C; u5; u6; u7B; u8; u9; u10; u11; u12; u13; u14; u14B; u15; u16; u18; u19; u20; u21; u22];
+Acoop = [ A1; A2; A3; A4; A4B; A4C; A5; A6; A7B; A8; A9; A10; A11; A12; A13; A14; A14B; A15; A16; A18; A19; A20; A21];
+lcoop = [ l1; l2; l3; l4; l4B; l4C; l5; l6; l7B; l8; l9; l10; l11; l12; l13; l14; l14B; l15; l16; l18; l19; l20; l21];
+ucoop = [ u1; u2; u3; u4; u4B; u4C; u5; u6; u7B; u8; u9; u10; u11; u12; u13; u14; u14B; u15; u16; u18; u19; u20; u21];
 A = [Au; Acoop];
 l = [lbu; lcoop]; 
 u = [ubu; ucoop];

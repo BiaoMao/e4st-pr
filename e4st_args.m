@@ -1,11 +1,13 @@
-function [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, contab, ...
-        Au, lbu, ubu, mpopt, N, fparm, H, Cw, HAVE_Q, opf_results, ...
-        energy, avail_fac, toc_map, toc_cap, toc_coeff, toc_type, dr2aap_idx, dr2aap_factor] = ...
-    e4st_args(baseMVA, bus, gen, branch, areas, gencost, offer, contab, ...
-        Au, lbu, ubu, mpopt, N, fparm, H, Cw)
+function [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, ...
+        contab, Au, lbu, ubu, mpopt, N, fparm, H, Cw, HAVE_Q, ...
+        caplim_map, caplim_max, caplim_min, avail_fac, ...
+        toc_map, toc_cap, toc_coeff, toc_type] = ...
+    e4st_args(mpc, offer, contab, Au, lbu, ubu, mpopt, N, fparm, H, Cw)
 %E4ST_ARGS  Parses and initializes input arguments for E4ST_SOLVE.
-%   [BASEMVA, BUS, GEN, BRANCH, GENCOST, OFFER, CONTAB, AU, LBU, UBU, ...
-%       MPOPT, N, FPARM, H, CW, HAVE_Q, OPF_RESULTS, ENERGY] = E4ST_ARGS(...)
+%   [BASEMVA, BUS, GEN, BRANCH, GENCOST, DCLINE, IFLIMS, OFFER, CONTAB, ...
+%       AU, LBU, UBU, MPOPT, N, FPARM, H, CW, HAVE_Q, ...
+%       CAPLIM_MAP, CAPLIM_MAX, CAPLIM_MIN, AVAIL_FAC, ...
+%       TOC_MAP, TOC_CAP, TOC_COEFF, TOC_TYPE] = E4ST_ARGS(...)
 %   Returns the full set of initialized input arguments for E4ST_SOLVE,
 %   filling in default values for missing arguments. See Examples below for
 %   the possible calling syntax options.
@@ -14,22 +16,8 @@ function [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, contab, ...
 %       Output argument options:
 %
 %       [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, contab, ...
-%           Au, lbu, ubu, mpopt, N, fparm, H, Cw, HAVE_Q] = e4st_args(...)
-%       [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, contab, ...
 %           Au, lbu, ubu, mpopt, N, fparm, H, Cw, HAVE_Q, ...
-%           opf_results, energy] = e4st_args(...)
-%       [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, contab, ...
-%           Au, lbu, ubu, mpopt, N, fparm, H, Cw, HAVE_Q, ...
-%           opf_results, energy, avail_fac] = e4st_args(...)
-%       [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, contab, ...
-%           Au, lbu, ubu, mpopt, N, fparm, H, Cw, HAVE_Q, ...
-%           maxbuild_map, maxbuild_capacity] = e4st_args(...)
-%       [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, contab, ...
-%           Au, lbu, ubu, mpopt, N, fparm, H, Cw, HAVE_Q, ...
-%           maxbuild_map, maxbuild_capacity, avail_fac] = e4st_args(...)
-%       [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, contab, ...
-%           Au, lbu, ubu, mpopt, N, fparm, H, Cw, HAVE_Q, ...
-%           maxbuild_map, maxbuild_capacity, avail_fac, ...
+%           caplim_map, caplim_max, caplim_min, avail_fac, ...
 %           toc_map, toc_cap, toc_coeff, toc_type] = e4st_args(...)
 %
 %       Input argument options:
@@ -41,15 +29,6 @@ function [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, contab, ...
 %       e4st_args(mpc, offer, contab, A, l, u)
 %       e4st_args(mpc, offer, contab, A, l, u, mpopt)
 %       e4st_args(mpc, offer, contab, A, l, u, mpopt, N, fparm, H, Cw)
-%       e4st_args(baseMVA, bus, gen, branch, areas, gencost, offer, contab)
-%       e4st_args(baseMVA, bus, gen, branch, areas, gencost, offer, contab, ...
-%                                   mpopt)
-%       e4st_args(baseMVA, bus, gen, branch, areas, gencost, offer, contab, ...
-%                                   A, l, u)
-%       e4st_args(baseMVA, bus, gen, branch, areas, gencost, offer, contab, ...
-%                                   A, l, u, mpopt)
-%       e4st_args(baseMVA, bus, gen, branch, areas, gencost, offer, contab, ...
-%                                   A, l, u, mpopt, N, fparm, H, Cw)
 %
 %   mpc is a MATPOWER case file or case struct with the fields baseMVA, bus,
 %   gen, branch, gencost, and (optionally) areas. It may also include a
@@ -130,12 +109,11 @@ function [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, contab, ...
 %
 %   The outputs are the MATPOWER case data, an offer matrix, a contab,
 %   user-defined constraints, MATPOWER options struct, user-defined
-%   costs, a flag indicating whether the offers include any reactive
-%   power portion, and the 'opf_results' and 'energy' fields from the
-%   results of a previous E4ST_SOLVE run. If the mpc struct passed in
-%   includes a 'maxbuild' field (with sub-fields 'map' and 'capacity'),
-%   then they are returned in the fields named 'maxbuild_map' and
-%   'maxbuild_capacity'. If the mpc struct passed in includes an
+%   costs, and a flag indicating whether the offers include any reactive
+%   power portion. If the mpc struct passed in includes a 'caplim' field
+%   (with sub-fields 'map' and 'max' and/or 'min'), then they are returned
+%   in the fields named 'caplim_map', 'caplim_max' and 'caplim_min',
+%   respectively. If the mpc struct passed in includes an
 %   'availability_factor' field, (an ng x 1 vector or ng x (nc+1) matrix)
 %   then it is returned as 'avail_fac'. If the input mpc struct includes
 %   an 'total_output' field, with sub-fields 'map', 'cap', 'coeff' and
@@ -152,8 +130,8 @@ function [baseMVA, bus, gen, branch, gencost, dcline, iflims, offer, contab, ...
 %   See http://e4st.com/ for more info.
 
 
-if ischar(baseMVA) || isstruct(baseMVA)  %% passing filename or struct
-  %---- e4st_args(baseMVA, bus,   gen,    branch, areas, gencost, offer, contab, Au,    lbu, ubu, mpopt, N, fparm, H, Cw)
+if ischar(mpc) || isstruct(mpc)     %% passing filename or struct
+  %---- e4st_args(mpc,     offer, contab, Au,     lbu,  ubu,      mpopt, N,      fparm, H,   Cw)
   % 11  e4st_args(mpc,     offer, contab, A,      l,     u,       mpopt, N,      fparm, H,   Cw)
   %  7  e4st_args(mpc,     offer, contab, A,      l,     u,       mpopt)
   %  6  e4st_args(mpc,     offer, contab, A,      l,     u)
@@ -162,52 +140,25 @@ if ischar(baseMVA) || isstruct(baseMVA)  %% passing filename or struct
   %  2  e4st_args(mpc,     mpopt)
   %  1  e4st_args(mpc)
   if any(nargin == [1, 2, 3, 4, 6, 7])
-    casefile = baseMVA;
-    if nargin == 11
-      Cw    = ubu;
-      H     = lbu;
-      fparm = Au;
-      N     = contab;
-      mpopt = offer;
-      ubu   = gencost;
-      lbu   = areas;
-      Au    = branch;
-      contab = gen;
-      offer = bus;
-    elseif nargin == 7
+    if nargin == 7
       Cw    = []; H = sparse(0, 0); fparm = []; N = sparse(0, 0);
-      mpopt = offer;
-      ubu   = gencost;
-      lbu   = areas;
-      Au    = branch;
-      contab = gen;
-      offer = bus;
-    elseif nargin == 5
+    elseif nargin == 6
       Cw    = []; H = sparse(0, 0); fparm = []; N = sparse(0, 0);
       mpopt = mpoption;
-      ubu   = gencost;
-      lbu   = areas;
-      Au    = branch;
-      contab = gen;
-      offer = bus;
     elseif nargin == 4
       Cw    = []; H = sparse(0, 0); fparm = []; N = sparse(0, 0);
+      mpopt = Au;
       ubu   = []; lbu = []; Au = sparse(0, 0);
-      mpopt = branch;
-      contab = gen;
-      offer = bus;
     elseif nargin == 3
       Cw    = []; H = sparse(0, 0); fparm = []; N = sparse(0, 0);
       ubu   = []; lbu = []; Au = sparse(0, 0);
       mpopt = mpoption;
-      contab = gen;
-      offer = bus;
     elseif nargin == 2
       Cw    = []; H = sparse(0, 0); fparm = []; N = sparse(0, 0);
       ubu   = []; lbu = []; Au = sparse(0, 0);
+      mpopt = offer;
       contab = [];
       offer = [];
-      mpopt = bus;
     elseif nargin == 1
       Cw    = []; H = sparse(0, 0); fparm = []; N = sparse(0, 0);
       ubu   = []; lbu = []; Au = sparse(0, 0);
@@ -218,7 +169,7 @@ if ischar(baseMVA) || isstruct(baseMVA)  %% passing filename or struct
   else
     error('e4st_args.m: Incorrect input parameter order, number or type');
   end
-  mpc = loadcase(casefile);
+  mpc = loadcase(mpc);
   [baseMVA, bus, gen, branch, gencost] = ...
     deal(mpc.baseMVA, mpc.bus, mpc.gen, mpc.branch, mpc.gencost);
   if isfield(mpc, 'availability_factor')
@@ -244,27 +195,33 @@ if ischar(baseMVA) || isstruct(baseMVA)  %% passing filename or struct
       error('e4st_args.m: all elements x of availability_factor must satisfy 0 <= x <= 1');
     end
   end
-  if isfield(mpc, 'maxbuild') && isfield(mpc.maxbuild, 'capacity') && ...
-        isfield(mpc.maxbuild, 'map')
-    opf_results = mpc.maxbuild.map;
-    energy      = mpc.maxbuild.capacity;
-    if size(opf_results, 2) ~= size(gen, 1)
-      error('e4st_args.m: number of maxbuild.map cols must equal number of gens');
+  if isfield(mpc, 'caplim') && isfield(mpc.caplim, 'map') && ...
+        (isfield(mpc.caplim, 'max') && ~isempty(mpc.caplim.max) || ...
+         isfield(mpc.caplim, 'min') && ~isempty(mpc.caplim.min))
+    caplim_map = mpc.caplim.map;
+    if isfield(mpc.caplim, 'max')
+        caplim_max = mpc.caplim.max;
+    else
+        caplim_max = [];
     end
-    if size(opf_results, 1) ~= size(energy, 1)
-      error('e4st_args.m: maxbuild.map and maxbuild.capacity must have the same number of rows');
+    if isfield(mpc.caplim, 'min')
+        caplim_min = mpc.caplim.min;
+    else
+        caplim_min = [];
+    end
+    if size(caplim_map, 2) ~= size(gen, 1)
+      error('e4st_args.m: number of caplim.map cols must equal number of gens');
+    end
+    if ~isempty(caplim_max) && size(caplim_map, 1) ~= size(caplim_max, 1)
+      error('e4st_args.m: caplim.map and caplim.max must have the same number of rows');
+    end
+    if ~isempty(caplim_min) && size(caplim_map, 1) ~= size(caplim_min, 1)
+      error('e4st_args.m: caplim.map and caplim.min must have the same number of rows');
     end
   else
-    if isfield(mpc, 'opf_results')
-      opf_results = mpc.opf_results;
-    else
-      opf_results = [];
-    end
-    if isfield(mpc, 'energy')
-      energy = mpc.energy;
-    else
-      energy = [];
-    end
+    caplim_map = [];
+    caplim_max = [];
+    caplim_min = [];
   end
   if isfield(mpc, 'total_output') && ...
         isfield(mpc.total_output, 'map') && ...
@@ -299,20 +256,6 @@ if ischar(baseMVA) || isstruct(baseMVA)  %% passing filename or struct
     toc_coeff   = [];
     toc_type    = [];
   end
-
-  % Apply demand response to annual average price
-  if isfield(mpc, 'dr2aap') && ...
-        isfield(mpc.dr2aap, 'load_idx') && ...
-        ~isempty(mpc.dr2aap.load_idx) && ...
-        isfield(mpc.dr2aap, 'load_factor') && ...
-        ~isempty(mpc.dr2aap.load_factor)
-      dr2aap_idx = mpc.dr2aap.load_idx;
-      dr2aap_factor = mpc.dr2aap.load_factor;
-  else
-    dr2aap_idx = [];
-    dr2aap_factor = [];
-  end
-
   if isempty(contab)
     if isfield(mpc, 'contingencies')   %% take contingencies from mpc
       contab = mpc.contingencies;
@@ -323,40 +266,8 @@ if ischar(baseMVA) || isstruct(baseMVA)  %% passing filename or struct
   if isempty(offer)
     offer = e4st_offer2mat(mpc);
   end
-else    %% passing individual data matrices
-  %---- e4st_args(baseMVA, bus, gen, branch, areas, gencost, offer, contab, Au,   lbu, ubu, mpopt, N, fparm, H, Cw)
-  % 16  e4st_args(baseMVA, bus, gen, branch, areas, gencost, offer, contab, Au,   lbu, ubu, mpopt, N, fparm, H, Cw)
-  % 12  e4st_args(baseMVA, bus, gen, branch, areas, gencost, offer, contab, Au,   lbu, ubu, mpopt)
-  % 11  e4st_args(baseMVA, bus, gen, branch, areas, gencost, offer, contab, Au,   lbu, ubu)
-  %  9  e4st_args(baseMVA, bus, gen, branch, areas, gencost, offer, contab, mpopt)
-  %  8  e4st_args(baseMVA, bus, gen, branch, areas, gencost, offer, contab)
-  dcline    = [];
-  iflims    = [];
-  opf_results = [];
-  energy    = [];
-  avail_fac = [];
-  toc_map   = [];
-  toc_cap   = [];
-  toc_coeff = [];
-  toc_type  = [];
-  if any(nargin == [8, 9, 11, 12])
-    if nargin == 12
-      Cw    = []; H = sparse(0, 0); fparm = []; N = sparse(0, 0);
-    elseif nargin == 11
-      Cw    = []; H = sparse(0, 0); fparm = []; N = sparse(0, 0);
-      mpopt = mpoption;
-    elseif nargin == 9
-      Cw    = []; H = sparse(0, 0); fparm = []; N = sparse(0, 0);
-      mpopt = Au;
-      ubu   = []; lbu = []; Au = sparse(0, 0);
-    elseif nargin == 8
-      Cw    = []; H = sparse(0, 0); fparm = []; N = sparse(0, 0);
-      ubu   = []; lbu = []; Au = sparse(0, 0);
-      mpopt = mpoption;
-    end
-  else
-    error('e4st_args.m: Incorrect input parameter order, number or type');
-  end
+else
+  error('e4st_args: MPC must be a MATPOWER case struct or file name');
 end
 
 %% put offer into matrix until we are done with gen re-ordering

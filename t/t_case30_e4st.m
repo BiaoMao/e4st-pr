@@ -217,6 +217,13 @@ mpc.if.lims = [
 ];
 
 %%-----  Emission Constraint Data  -----%%
-mpc.emission_constraints.map = [];
-mpc.emission_constraints.cap = [];
-mpc.emission_constraints.coeff = [];
+ng = size(mpc.gen, 1);
+mpc.total_output.map = zeros(3, ng);
+mpc.total_output.map(1, 1:4)  = 1;      %% area 1
+mpc.total_output.map(2, 9:12) = 1;      %% area 2
+mpc.total_output.map(3, 5:8)  = 1;      %% area 3
+mpc.total_output.cap = [100; 90; 9.5];
+mpc.total_output.coeff = zeros(ng, 2);
+mpc.total_output.coeff(1:12, 1) = 1;
+mpc.total_output.coeff(1:12, 2) = 0.1;
+mpc.total_output.type = [1; 1; 2];

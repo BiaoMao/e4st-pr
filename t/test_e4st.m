@@ -22,5 +22,6 @@ tests = {};
 
 tests{end+1} = 't_apply_changes';
 tests{end+1} = 't_e4st_solve';
+tests{end+1} = 't_e4st_caplim';
 
 t_run_tests( tests, verbose );

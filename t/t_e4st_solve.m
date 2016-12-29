@@ -57,19 +57,17 @@ if have_fcn('gurobi')
     mpopt = mpoption(mpopt, 'gurobi.opts.MIPGapAbs', 0);
 end
 if have_fcn('mosek')
-    %mpopt = mpoption(mpopt, 'mosek.lp_alg', 0);         %% automatic
-    %mpopt = mpoption(mpopt, 'mosek.lp_alg', 1);         %% interior point
-    %mpopt = mpoption(mpopt, 'mosek.lp_alg', 3);         %% primal simplex
-    mpopt = mpoption(mpopt, 'mosek.lp_alg', 4);         %% dual simplex
     sc = mosek_symbcon;
-    %mpopt = mpoption(mpopt, 'mosek.lp_alg', 5);         %% primal dual simplex
-    %mpopt = mpoption(mpopt, 'mosek.lp_alg', 6);         %% automatic simplex
-    %mpopt = mpoption(mpopt, 'mosek.lp_alg', 7);         %% network primal simplex
+    %mpopt = mpoption(mpopt, 'mosek.lp_alg', sc.MSK_OPTIMIZER_FREE);            %% default
+    %mpopt = mpoption(mpopt, 'mosek.lp_alg', sc.MSK_OPTIMIZER_INTPNT);          %% interior point
+    %mpopt = mpoption(mpopt, 'mosek.lp_alg', sc.MSK_OPTIMIZER_PRIMAL_SIMPLEX);  %% primal simplex
+    mpopt = mpoption(mpopt, 'mosek.lp_alg', sc.MSK_OPTIMIZER_DUAL_SIMPLEX);     %% dual simplex
+    %mpopt = mpoption(mpopt, 'mosek.lp_alg', sc.MSK_OPTIMIZER_FREE_SIMPLEX);    %% automatic simplex
     %mpopt = mpoption(mpopt, 'mosek.opts.MSK_DPAR_MIO_TOL_X', 0);
     mpopt = mpoption(mpopt, 'mosek.opts.MSK_IPAR_MIO_NODE_OPTIMIZER', sc.MSK_OPTIMIZER_DUAL_SIMPLEX);
     mpopt = mpoption(mpopt, 'mosek.opts.MSK_IPAR_MIO_ROOT_OPTIMIZER', sc.MSK_OPTIMIZER_DUAL_SIMPLEX);
     mpopt = mpoption(mpopt, 'mosek.opts.MSK_DPAR_MIO_TOL_ABS_RELAX_INT', 1e-9);
-    mpopt = mpoption(mpopt, 'mosek.opts.MSK_DPAR_MIO_TOL_REL_RELAX_INT', 0);
+    %mpopt = mpoption(mpopt, 'mosek.opts.MSK_DPAR_MIO_TOL_REL_RELAX_INT', 0);
     mpopt = mpoption(mpopt, 'mosek.opts.MSK_DPAR_MIO_TOL_REL_GAP', 0);
     mpopt = mpoption(mpopt, 'mosek.opts.MSK_DPAR_MIO_TOL_ABS_GAP', 0);
 end
@@ -232,20 +230,6 @@ if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
     roffer(:, 11:12) = 0;
 
     %% set total output constraints (e.g. emission caps)
-    ng = size(mpc.gen, 1);
-    mpc.total_output.map = zeros(3, ng);
-    mpc.total_output.map(1, 1:4)  = 1;      %% area 1
-    mpc.total_output.map(2, 9:12) = 1;      %% area 2
-    mpc.total_output.map(3, 5:8)  = 1;      %% area 3
-    mpc.total_output.cap = [100; 90; 9.5];
-    mpc.total_output.cap = [100; 100; 100];
-    mpc.total_output.coeff = zeros(ng, 2);
-    mpc.total_output.coeff(1:12, 1) = 1;
-    mpc.total_output.coeff(1:12, 2) = 0.1;
-    % mpc.total_output.coeff(1:12, 1) = 0.1  * (1:12)';
-    % mpc.total_output.coeff(1:12, 2) = 0.01 * (1:12)';
-    mpc.total_output.type = [1; 1; 2];
-
     toc_caps  = { [40; 100; 8.2], [30; 100; 8.2] };
 
     %% load solution results

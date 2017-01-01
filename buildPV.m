@@ -1,7 +1,5 @@
-function [mpc, offer] = buildNG(mpc, offer, genAf, genInfo, newType, newLoc, verbose)
-%% buildNG: add buildable ngcc and ngt
-%   newLoc = 'all', build new gen at all buses
-%   newLoc = 'exist', build new gen at existing buses
+function [mpc, offer] = buildPV(mpc, offer, genInfo, pvInfo, genAf, newLoc, verbose)
+%% buildPV: add buildable PV
 %
 %   E4ST
 %   Copyright (c) 2012-2016 by Power System Engineering Research Center (PSERC)
@@ -16,12 +14,13 @@ function [mpc, offer] = buildNG(mpc, offer, genAf, genInfo, newType, newLoc, ver
         verbose = 1; % show a little debug information
     end
 
-    % Build ngcc or ngt
-    iGeninfo = strcmp(genInfo.Properties.RowNames, newType);
+    % Build wind
+    fuelType = 'solar';
+    iGeninfo = strcmp(genInfo.Properties.RowNames, fuelType);
     if strcmp(newLoc, 'all')
         iBus2build = ~strcmp(mpc.genfuel, 'dl'); % get all generators bus
     else
-        iBus2build = strcmp(mpc.genfuel, 'ng') & (offer(:, 2) >= 200); % get ng bus with 200MW+
+        iBus2build = strcmp(mpc.genfuel, 'solar') & (offer(:, 2) >= 50); % get solar bus with 50MW+
     end
     busId = unique(mpc.gen(iBus2build, 1)); % get unique bus id
     numBus = length(busId);
@@ -47,7 +46,7 @@ function [mpc, offer] = buildNG(mpc, offer, genAf, genInfo, newType, newLoc, ver
     newGencost(:, 5) = genInfo{iGeninfo, 'Gencost'}; % gencost
 
     % Add new gen fuel table
-    newGenfuel(:, 1) = {newType};
+    newGenfuel(:, 1) = {fuelType};
 
     % Add new gen aux data table
     newGenaux = repmat(genInfo{iGeninfo, 8 : 17}, numBus, 1);
@@ -56,7 +55,7 @@ function [mpc, offer] = buildNG(mpc, offer, genAf, genInfo, newType, newLoc, ver
     newGenindex = ones(numBus, 1);
 
     % Add new AFs
-    newAf = repmat(genAf{'ng', :}, numBus, 1);
+    newAf = repmat(genAf{fuelType, :}, numBus, 1);
 
     % Add new offer table
     newOffer(:, 1) = sum(genInfo{iGeninfo, {'Cost2Keep', 'Cost2Build', 'Tax', 'Insurance'}}, 2); % fixed cost
@@ -64,19 +63,24 @@ function [mpc, offer] = buildNG(mpc, offer, genAf, genInfo, newType, newLoc, ver
     newOffer(:, 3) = 0;
     newOffer(:, 4) = Inf;
 
-    % Update in the mpc and offer            
+    % Update in the mpc and offer 
+    preNg = mpc.ng;        
     mpc.gen = [mpc.gen; newGen];
     mpc.gencost = [mpc.gencost; newGencost];
     mpc.genfuel = [mpc.genfuel; newGenfuel];
-    mpc.gen_aux_data = [mpc.gen_aux_data; newGenaux];          
+    mpc.gen_aux_data = [mpc.gen_aux_data; newGenaux];     
+    mpc.availability_factor = [mpc.availability_factor; newAf];     
     mpc.newgen = [mpc.newgen; newGenindex];
-    mpc.availability_factor = [mpc.availability_factor; newAf];
     mpc.ng = size(mpc.gen,1);
     mpc.nb = size(mpc.bus,1);
     offer = [offer; newOffer];
 
+    % Update new solar AF   
+    idxGen = (preNg + 1 :  preNg + numBus)';
+    mpc = setReAF(mpc, pvInfo, fuelType, idxGen);
+
     % Debug information
     if verbose == 1
-        fprintf('Buildable %s are added\n', newType);
+        fprintf('Buildable %s are added\n', fuelType);
     end
 end

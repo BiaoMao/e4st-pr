@@ -1,7 +1,5 @@
-function [mpc, offer] = buildNG(mpc, offer, genAf, genInfo, newType, newLoc, verbose)
-%% buildNG: add buildable ngcc and ngt
-%   newLoc = 'all', build new gen at all buses
-%   newLoc = 'exist', build new gen at existing buses
+function [mpc, offer] = buildWind(mpc, offer, genInfo, windInfo, verbose)
+%% buildWind: add buildable wind
 %
 %   E4ST
 %   Copyright (c) 2012-2016 by Power System Engineering Research Center (PSERC)
@@ -12,18 +10,14 @@ function [mpc, offer] = buildNG(mpc, offer, genAf, genInfo, newType, newLoc, ver
 %   See http://e4st.com/ for more info.
     
     % Set default argin
-    if nargin < 7
+    if nargin < 5
         verbose = 1; % show a little debug information
     end
 
-    % Build ngcc or ngt
-    iGeninfo = strcmp(genInfo.Properties.RowNames, newType);
-    if strcmp(newLoc, 'all')
-        iBus2build = ~strcmp(mpc.genfuel, 'dl'); % get all generators bus
-    else
-        iBus2build = strcmp(mpc.genfuel, 'ng') & (offer(:, 2) >= 200); % get ng bus with 200MW+
-    end
-    busId = unique(mpc.gen(iBus2build, 1)); % get unique bus id
+    % Build wind
+    fuelType = 'wind';
+    iGeninfo = strcmp(genInfo.Properties.RowNames, fuelType);
+    busId = windInfo{:, 'bus'}; % get unique bus id
     numBus = length(busId);
 
     % Initial all the new table
@@ -47,7 +41,7 @@ function [mpc, offer] = buildNG(mpc, offer, genAf, genInfo, newType, newLoc, ver
     newGencost(:, 5) = genInfo{iGeninfo, 'Gencost'}; % gencost
 
     % Add new gen fuel table
-    newGenfuel(:, 1) = {newType};
+    newGenfuel(:, 1) = {fuelType};
 
     % Add new gen aux data table
     newGenaux = repmat(genInfo{iGeninfo, 8 : 17}, numBus, 1);
@@ -56,11 +50,12 @@ function [mpc, offer] = buildNG(mpc, offer, genAf, genInfo, newType, newLoc, ver
     newGenindex = ones(numBus, 1);
 
     % Add new AFs
-    newAf = repmat(genAf{'ng', :}, numBus, 1);
+    startCol = find(strcmp(windInfo.Properties.VariableNames, 'C1')); % Starting of AF table
+    newAf = windInfo{:, startCol : end};
 
     % Add new offer table
     newOffer(:, 1) = sum(genInfo{iGeninfo, {'Cost2Keep', 'Cost2Build', 'Tax', 'Insurance'}}, 2); % fixed cost
-    newOffer(:, 2) = genInfo{iGeninfo, 'InstallCap'}; % Installed Cap
+    newOffer(:, 2) = windInfo{:, 'Cap'}; % Installed Cap
     newOffer(:, 3) = 0;
     newOffer(:, 4) = Inf;
 
@@ -77,6 +72,6 @@ function [mpc, offer] = buildNG(mpc, offer, genAf, genInfo, newType, newLoc, ver
 
     % Debug information
     if verbose == 1
-        fprintf('Buildable %s are added\n', newType);
+        fprintf('Buildable %s are added\n', fuelType);
     end
 end

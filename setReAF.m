@@ -1,5 +1,7 @@
-function [mpc] = setReAF(mpc, fuelAf, fuelType, verbose)
-%% setReAf: set availability factors for existing wind and solar
+function [mpc] = setReAF(mpc, fuelInfo, fuelType, idxGen, verbose)
+%% setReAf: update availability factors for wind and solar
+%	AFs should be set by default values first	
+%	idxGen is optional: only updates parts of the AFs
 %
 %   E4ST
 %   Copyright (c) 2012-2016 by Power System Engineering Research Center (PSERC)
@@ -10,24 +12,24 @@ function [mpc] = setReAF(mpc, fuelAf, fuelType, verbose)
 %   See http://e4st.com/ for more info.
 
 	% Set default argin
-	if nargin < 4
+	if nargin < 5
 		verbose = 1; % show a little debug information
 	end
 
     % Initialize 
     nGen = size(mpc.gen, 1);
-    nHours = size(fuelAf, 2);
+    startCol = find(strcmp(fuelInfo.Properties.VariableNames, 'C1')); % Starting of AF table
     idx = (1 : nGen)';
-	if isfield(mpc, 'newgen')   
-		idx = idx & mpc.newgen ~= 1;
+    if exist('idxGen', 'var')   
+		idx(~idxGen) = 0;
 	end
 
     % Update AF by each bus 
     genIdx = find(idx & strcmp(mpc.genfuel, fuelType));
     for i = genIdx'   
-    	afIdx = fuelAf{:, 'bus'} == mpc.gen(i, 1);
+    	afIdx = fuelInfo{:, 'bus'} == mpc.gen(i, 1);
     	if any(afIdx)
-            mpc.availability_factor(i, :) = fuelAf{afIdx, 2 : end};    		
+            mpc.availability_factor(i, :) = fuelInfo{afIdx, startCol : end};    		
         else
             fprintf('%s at bus %d is set with default AF\n', fuelType, mpc.gen(i, 1));    	
         end    	

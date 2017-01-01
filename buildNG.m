@@ -1,4 +1,4 @@
-function [mpc, offer] = buildNG(mpc, offer, genAf, genInfo, newType, newLoc, verbose)
+function [mpc, offer] = buildNG(mpc, offer, caseInfo, newType, newLoc, verbose)
 %% buildNG: add buildable ngcc and ngt
 %   newLoc = 'all', build new gen at all buses
 %   newLoc = 'exist', build new gen at existing buses
@@ -12,9 +12,13 @@ function [mpc, offer] = buildNG(mpc, offer, genAf, genInfo, newType, newLoc, ver
 %   See http://e4st.com/ for more info.
     
     % Set default argin
-    if nargin < 7
+    if nargin < 6
         verbose = 1; % show a little debug information
     end
+
+    % Initial data
+    genAf = caseInfo.genAf;
+    genInfo = caseInfo.genInfo;    
 
     % Build ngcc or ngt
     iGeninfo = strcmp(genInfo.Properties.RowNames, newType);

@@ -1,4 +1,4 @@
-function [mpc, offer] = buildWind(mpc, offer, genInfo, windInfo, verbose)
+function [mpc, offer] = buildWind(mpc, offer, caseInfo, verbose)
 %% buildWind: add buildable wind
 %
 %   E4ST
@@ -10,9 +10,13 @@ function [mpc, offer] = buildWind(mpc, offer, genInfo, windInfo, verbose)
 %   See http://e4st.com/ for more info.
     
     % Set default argin
-    if nargin < 5
+    if nargin < 4
         verbose = 1; % show a little debug information
     end
+
+    % Initial data
+    windInfo = caseInfo.windInfo;
+    genInfo = caseInfo.genInfo;   
 
     % Build wind
     fuelType = 'wind';

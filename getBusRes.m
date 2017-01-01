@@ -1,4 +1,4 @@
-function busRes = getBusRes(result, caseInfo, locInfo)
+function busRes = getBusRes(result, caseInfo)
 %% getBusRes: summarrize the results by bus
 %
 %   E4ST
@@ -8,6 +8,9 @@ function busRes = getBusRes(result, caseInfo, locInfo)
 %   This file is part of E4ST.
 %   Covered by the 3-clause BSD License (see LICENSE file for details).
 %   See http://e4st.com/ for more info.
+    
+    % Initial input data
+    locInfo = caseInfo.locationInfo;
 
 	%% Get hourly results
     loadHourly = zeros(size(result.base.bus, 1), caseInfo.nHours);

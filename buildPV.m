@@ -1,4 +1,4 @@
-function [mpc, offer] = buildPV(mpc, offer, genInfo, pvInfo, genAf, newLoc, verbose)
+function [mpc, offer] = buildPV(mpc, offer, caseInfo, newLoc, verbose)
 %% buildPV: add buildable PV
 %
 %   E4ST
@@ -10,9 +10,14 @@ function [mpc, offer] = buildPV(mpc, offer, genInfo, pvInfo, genAf, newLoc, verb
 %   See http://e4st.com/ for more info.
     
     % Set default argin
-    if nargin < 7
+    if nargin < 5
         verbose = 1; % show a little debug information
     end
+
+    % Initial data
+    pvInfo = caseInfo.pvInfo;
+    genInfo = caseInfo.genInfo;  
+    genAf = caseInfo.genAf;
 
     % Build wind
     fuelType = 'solar';

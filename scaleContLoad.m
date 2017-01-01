@@ -1,4 +1,4 @@
-function [contab] = scaleContLoad(mpc, basicInfo, scalings, verbose)
+function [contab] = scaleContLoad(mpc, caseInfo, verbose)
 %% scaleContLoad: scale loads in a area with scallings in contingency hour
 %
 %   E4ST
@@ -10,30 +10,31 @@ function [contab] = scaleContLoad(mpc, basicInfo, scalings, verbose)
 %   See http://e4st.com/ for more info.
 
 	% Set default argin
-	if nargin < 4
+	if nargin < 3
 		verbose = 1; % show a little debug information
 	end
 
-    % Initialize 
-    define_constants;
-    CT_LOAD = 4; % modify fixed and dispatchable loads
-    CT_TABLE = 8; % area-wide load changes
-    nHours = length(basicInfo.hours);
-    area = unique(mpc.bus(:, BUS_AREA));
-    conNum = length(area) * (nHours-1);
-    contab = zeros(conNum, 7);
-    i = 1;
-    for iHour = 2 : nHours  
-      for iArea = 1 : length(area)
-          contab(i,:) = [iHour - 1 basicInfo.probability(iHour) CT_TABLE area(iArea) CT_LOAD  2 ...
-           scalings{iArea, iHour}];
-          i = i + 1;
-      end
+  % Initialize 
+  define_constants;
+  scalings = caseInfo.loadAf;
+  CT_LOAD = 4; % modify fixed and dispatchable loads
+  CT_TABLE = 8; % area-wide load changes
+  nHours = length(caseInfo.hours);
+  area = unique(mpc.bus(:, BUS_AREA));
+  conNum = length(area) * (nHours-1);
+  contab = zeros(conNum, 7);
+  i = 1;
+  for iHour = 2 : nHours  
+    for iArea = 1 : length(area)
+        contab(i,:) = [iHour - 1 caseInfo.probability(iHour) CT_TABLE area(iArea) CT_LOAD  2 ...
+         scalings{iArea, iHour}];
+        i = i + 1;
     end
+  end
 
-    % Debug information
-    if verbose == 1
-        fprintf('Scale loads in %d area in %d contingency hour\n', length(area), nHours - 1);
-    end
+  % Debug information
+  if verbose == 1
+      fprintf('Scale loads in %d area in %d contingency hour\n', length(area), nHours - 1);
+  end
 
  

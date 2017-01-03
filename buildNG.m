@@ -60,7 +60,7 @@ function [mpc, offer] = buildNG(mpc, offer, caseInfo, newType, newLoc, verbose)
     newGenindex = ones(numBus, 1);
 
     % Add new AFs
-    newAf = repmat(genAf{'ng', :}, numBus, 1);
+    newAf = repmat(genAf{newType, :}, numBus, 1);
 
     % Add new offer table
     newOffer(:, 1) = sum(genInfo{iGeninfo, {'Cost2Keep', 'Cost2Build', 'Tax', 'Insurance'}}, 2); % fixed cost

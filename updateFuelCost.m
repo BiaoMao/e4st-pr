@@ -1,4 +1,4 @@
-function [mpc] = updataFuelCost(mpc, yearInfo, year, verbose)
+function [mpc] = updateFuelCost(mpc, yearInfo, year, verbose)
 %% updataFuelCost: update fuel cost by the current fuel prices for existing generators
 %
 %   E4ST

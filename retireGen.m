@@ -42,10 +42,21 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, verbose)
     end
 
     % Label the gen built in previous decades (newgen - 1)
-    mpc.newgen = mpc.newgen - 1;        
+    mpc.newgen = mpc.newgen - 1;   
+
+    % Delete gen that used caps are zeros    
+    mpc.gen(idx, :) = [];
+    mpc.gencost(idx, :) = [];
+    mpc.genfuel(idx, :) = [];
+    mpc.gen_aux_data(idx, :) = [];
+    mpc.newgen(idx, :) = [];
+    mpc.availability_factor(idx, :) = [];
+    offer(idx, :) = [];
+    mpc.total_output.map(:, idx) = [];
+    mpc.total_output.coeff(idx, :) = [];
 
     % Debug information
     if verbose == 1
-        fprintf('Generators are retired\n');
+        fprintf('The number of retired generators are %d\n', length(find(idx)));
     end
 end

@@ -15,7 +15,12 @@ classdef HydroEI
     
     methods (Static)	
         %% constrainHydro: set the hydro constraint cap
-        function [mpc] = setHydroCap0(mpc, caseInfo)
+        function [mpc] = setHydroCap0(mpc, caseInfo, verbose)
+            % Set default argin
+            if nargin < 3
+                verbose = 1; % show a little debug information
+            end
+
             define_constants;
             hydroMap = caseInfo.hydroMap{:, :};
             groups = size(hydroMap, 2);            
@@ -59,6 +64,11 @@ classdef HydroEI
             mpc.total_output.cap = cap;
             mpc.total_output.coeff = coeff;
             mpc.total_output.type = coeff_type;
+
+            % Debug information
+            if verbose == 1
+                fprintf('Hydro constraints in Year0 are set in EI\n');
+            end
         end
 
         %% setHydroCap10: definitely correct hydro cap in CA in 2025

@@ -32,11 +32,11 @@ function [mpc, offer] = buildNG(mpc, offer, caseInfo, newType, newLoc, verbose)
 
     % Initial all the new table
     newGen = zeros(numBus,21);
-    newGencost = zeros(numBus,24);
-    newGenfuel = cell(numBus,1);
-    newGenaux = zeros(numBus,10);
+    newGencost = zeros(numBus, size(mpc.gencost, 2));
+    newGenfuel = cell(numBus, 1);
+    newGenaux = zeros(numBus, 10);
     newGenindex = zeros(numBus,1);
-    newOffer = zeros(numBus,13);
+    newOffer = zeros(numBus, 13);
 
     % Add new gen table             
     newGen(:, 1) = busId; % bus number

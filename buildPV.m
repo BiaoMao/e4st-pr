@@ -32,7 +32,7 @@ function [mpc, offer] = buildPV(mpc, offer, caseInfo, newLoc, verbose)
 
     % Initial all the new table
     newGen = zeros(numBus,21);
-    newGencost = zeros(numBus,24);
+    newGencost = zeros(numBus, size(mpc.gencost, 2));
     newGenfuel = cell(numBus,1);
     newGenaux = zeros(numBus,10);
     newGenindex = zeros(numBus,1);

@@ -15,7 +15,12 @@ function [mpc, offer] = buildWind(mpc, offer, caseInfo, verbose)
     end
 
     % Initial data
-    windInfo = caseInfo.windInfo;
+    if isfield(caseInfo, 'newWindInfo')
+        % If there are two sets of windInfo
+        windInfo = caseInfo.newWindInfo;
+    else
+        windInfo = caseInfo.windInfo;
+    end
     genInfo = caseInfo.genInfo;   
 
     % Build wind
@@ -26,7 +31,7 @@ function [mpc, offer] = buildWind(mpc, offer, caseInfo, verbose)
 
     % Initial all the new table
     newGen = zeros(numBus,21);
-    newGencost = zeros(numBus,24);
+    newGencost = zeros(numBus, size(mpc.gencost, 2));
     newGenfuel = cell(numBus,1);
     newGenaux = zeros(numBus,10);
     newGenindex = zeros(numBus,1);

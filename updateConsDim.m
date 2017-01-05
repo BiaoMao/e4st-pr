@@ -13,6 +13,6 @@ function [mpc] = updateConsDim(mpc)
     delta_ng = mpc.ng - old_ng;
     mpc.total_output.map = [mpc.total_output.map zeros(n_contraints, delta_ng)];        
     
-    mpc.total_output.coeff = [mpc.total_output.coeff; ones(delta_ng, 1)];
+    mpc.total_output.coeff = [mpc.total_output.coeff; ones(delta_ng, size(mpc.total_output.coeff, 2))];
 
  

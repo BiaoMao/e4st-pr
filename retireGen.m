@@ -1,4 +1,4 @@
-function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, verbose)
+function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
 %% retireGen: retire generations which are smaller than theta
 %
 %   E4ST
@@ -10,7 +10,7 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, verbose)
 %   See http://e4st.com/ for more info.
     
     % Set default argin
-    if nargin < 5
+    if nargin < 6
         verbose = 1; % show a little debug information
     end
 
@@ -28,16 +28,21 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, verbose)
         end
     end
 
+    % Choose which group to apply retirement
+    if strcmp(group, 'new')
+        idxNoretire = idxNoretire & (mpc.newgen ~= 1);
+    end
+
     % Set PositiveReserveCap to used capacity
     offer(~idxNoretire, 2) = usedCap;
 
     % Remove the cost to build,ngt-3,ngcc-9,solar-13,6-wind,, 1-cost to keep    
     isBuilt = mpc.newgen == 1;  
     if ~isempty(mpc.genfuel(isBuilt, :))
-        newFuels = unique(mpc.genfuel{isBuilt, :});
-        for fuel = newFuels
+        newFuels = unique(mpc.genfuel(isBuilt, :));
+        for fuel = newFuels'
             bultIdx = strcmp(mpc.genfuel, fuel);
-            offer(bultIdx, 1) = caseInfo.genInfo(fuel, 'Cost2Keep');
+            offer(bultIdx, 1) = caseInfo.genInfo{fuel, 'Cost2Keep'};
         end
     end
 
@@ -57,6 +62,6 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, verbose)
 
     % Debug information
     if verbose == 1
-        fprintf('The number of retired generators are %d\n', length(find(idx)));
+        fprintf('The number of retired generators is %d\n', length(find(idx)));
     end
 end

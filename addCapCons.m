@@ -1,4 +1,4 @@
-function mpc = addCapCons(mpc, caseInfo, verbose)
+function mpc = addCapCons(mpc, caseInfo, group, verbose)
 %% addCapCons: add capacity constraints for each States and fuel types
 %
 %   E4ST
@@ -10,7 +10,7 @@ function mpc = addCapCons(mpc, caseInfo, verbose)
 %   See http://e4st.com/ for more info.
 
 	% Set default argin
-	if nargin < 3
+	if nargin < 4
 		verbose = 1; % show a little debug information
 	end
 
@@ -21,6 +21,13 @@ function mpc = addCapCons(mpc, caseInfo, verbose)
     map = zeros(numCons, numGens);
     cap = zeros(numCons, 1);
 
+    % Select the group to apply these caps
+    if strcmp(group, 'new')
+        idxGroup = mpc.newgen == 1;
+    elseif strcmp(group, 'all')
+        idxGroup = ones(numGens, 1);
+    end    
+
     % Extract the bus info
     genBus = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
     genBus = join(genBus, caseInfo.locationInfo);
@@ -28,7 +35,7 @@ function mpc = addCapCons(mpc, caseInfo, verbose)
     for i = 1 : m
         for j = 1 : n
             map(idx, :) = strcmp(genBus{:, 'State'}, capConstraints.Properties.RowNames{i}) ...
-                & strcmp(mpc.genfuel, capConstraints.Properties.VariableNames{j});
+                & strcmp(mpc.genfuel, capConstraints.Properties.VariableNames{j}) & idxGroup;
             cap(idx, 1) = capConstraints{i, j};
             idx = idx + 1;
         end
@@ -36,8 +43,8 @@ function mpc = addCapCons(mpc, caseInfo, verbose)
 
     % Update in mpc to make equality constraints
     mpc.caplim.map = map;
-    % mpc.caplim.max = cap;
-    mpc.caplim.min = cap;
+    mpc.caplim.max = cap;
+    %mpc.caplim.min = cap;
 
     % Debug information
     if verbose == 1

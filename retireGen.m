@@ -17,24 +17,24 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
     usedCap = result.reserve.qty.Rp_pos;
             
     % Filter out the small generators
-    idx = usedCap < caseInfo.retireTheta;
-    usedCap(idx) = 0;
+    idxSmall = usedCap < caseInfo.retireTheta;   
 
     % Filter out the fuel types that does not retire  
-    idxNoretire = zeros(size(mpc.gen, 1), 1);          
-    if isfield(caseInfo, 'noRetire')                
-        for fuelType = caseInfo.noRetire
-            idxNoretire = idxNoretire | strcmp(mpc.genfuel, fuelType);
-        end
-    end
+%     idxNoretire = zeros(size(mpc.gen, 1), 1);          
+%     if isfield(caseInfo, 'noRetire')                
+%         for fuelType = caseInfo.noRetire
+%             idxNoretire = idxNoretire | strcmp(mpc.genfuel, fuelType);
+%         end
+%     end   
 
     % Choose which group to apply retirement
     if strcmp(group, 'new')
-        idxNoretire = idxNoretire & (mpc.newgen ~= 1);
+        idxRetire = (mpc.newgen == 1);
     end
 
-    % Set PositiveReserveCap to used capacity
-    offer(~idxNoretire, 2) = usedCap;
+    % Set PositiveReserveCap to used capacity    
+    usedCap(idxSmall) = 0;
+    offer(idxRetire, 2) = usedCap(idxRetire, 1);
 
     % Remove the cost to build,ngt-3,ngcc-9,solar-13,6-wind,, 1-cost to keep    
     isBuilt = mpc.newgen == 1;  
@@ -50,6 +50,7 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
     mpc.newgen = mpc.newgen - 1;   
 
     % Delete gen that used caps are zeros    
+    idx = idxSmall & idxRetire;
     mpc.gen(idx, :) = [];
     mpc.gencost(idx, :) = [];
     mpc.genfuel(idx, :) = [];
@@ -59,6 +60,7 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
     offer(idx, :) = [];
     mpc.total_output.map(:, idx) = [];
     mpc.total_output.coeff(idx, :) = [];
+    mpc.ng = size(mpc.gen, 1);    
 
     % Debug information
     if verbose == 1

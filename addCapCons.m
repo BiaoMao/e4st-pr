@@ -21,6 +21,13 @@ function mpc = addCapCons(mpc, caseInfo, group, verbose)
     map = zeros(numCons, numGens);
     cap = zeros(numCons, 1);
 
+    % Select full info
+    if isfield(caseInfo, 'fullLocInfo')
+        locInfo = caseInfo.fullLocInfo;
+    else 
+        locInfo = caseInfo.locationInfo;
+    end
+
     % Select the group to apply these caps
     if strcmp(group, 'new')
         idxGroup = mpc.newgen == 1;
@@ -30,7 +37,7 @@ function mpc = addCapCons(mpc, caseInfo, group, verbose)
 
     % Extract the bus info
     genBus = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
-    genBus = join(genBus, caseInfo.locationInfo);
+    genBus = join(genBus, locInfo);
     idx = 1;
     for i = 1 : m
         for j = 1 : n
@@ -44,7 +51,7 @@ function mpc = addCapCons(mpc, caseInfo, group, verbose)
     % Update in mpc to make equality constraints
     mpc.caplim.map = map;
     mpc.caplim.max = cap;
-    %mpc.caplim.min = cap;
+    % mpc.caplim.min = cap;
 
     % Debug information
     if verbose == 1

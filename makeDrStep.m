@@ -93,7 +93,7 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
 
     % Filter out gencost with negative LMP and zero loads
     % Get index of negative and zero prices and zero loads
-    idxNegLoad = defaultPrices <= 0 | loads == 0 | pPrice<=0;
+    idxNegLoad = defaultPrices <= 0 | loads == 0 | defaultPrices == 5000 | pLoads <= 0;
     idxNegGencost = iDl(idxNegLoad); 
     if any(idxNegLoad)
         % Recover to original cost

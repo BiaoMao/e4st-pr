@@ -20,6 +20,7 @@ function [mpc] = applySubsidy(mpc, caseInfo, verbose)
         idx = strcmp(mpc.genfuel, caseInfo.subTable{i, 'subType'});      
         mpc.gencost(idx, 5) = mpc.gencost(idx, 5) - caseInfo.subTable{i, 'subValue'};   
         if verbose == 1
-            fprintf('Apply subsidy for %s\n', caseInfo.subTable{i, 'subType'});
+            fprintf('Apply $%d subsidy to gencost for %s\n', ...
+                caseInfo.subTable{i, 'subValue'}, caseInfo.subTable{i, 'subType'}{1});
         end    
     end     

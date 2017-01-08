@@ -23,6 +23,7 @@ function [mpc, offer] = buildCoal(mpc, offer, caseInfo, newLoc, verbose)
 
     % Build coal
     iGeninfo = strcmp(genInfo.Properties.RowNames, newType);
+    newCap = genInfo{iGeninfo, 'InstallCap'}; % Installed Cap
     if strcmp(newLoc, 'all')
         iBus2build = ~strcmp(mpc.genfuel, 'dl'); % get all generators bus
     elseif strcmp(newLoc, 'exist')
@@ -44,7 +45,7 @@ function [mpc, offer] = buildCoal(mpc, offer, caseInfo, newLoc, verbose)
     newGen(:,6) = 1; % voltage magnitude setpoint
     newGen(:,7) = 100; % MVA base
     newGen(:,8) = 1; % gen status
-    newGen(:,9) = Inf; % PMAX
+    newGen(:,9) = newCap; % PMAX
     newGen(:,18) = Inf; % ramp rate for 10 min 
 
     % Add new gencost table
@@ -65,7 +66,7 @@ function [mpc, offer] = buildCoal(mpc, offer, caseInfo, newLoc, verbose)
 
     % Add new offer table
     newOffer(:, 1) = sum(genInfo{iGeninfo, {'Cost2Keep', 'Cost2Build', 'Tax', 'Insurance'}}, 2); % fixed cost
-    newOffer(:, 2) = genInfo{iGeninfo, 'InstallCap'}; % Installed Cap
+    newOffer(:, 2) = newCap; % Installed Cap
     newOffer(:, 3) = 0;
     newOffer(:, 4) = Inf;
 

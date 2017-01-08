@@ -22,6 +22,7 @@ function [mpc, offer] = buildWind(mpc, offer, caseInfo, verbose)
         windInfo = caseInfo.windInfo;
     end
     genInfo = caseInfo.genInfo;   
+    newCap = windInfo{:, 'Cap'};
 
     % Build wind
     fuelType = 'wind';
@@ -42,7 +43,7 @@ function [mpc, offer] = buildWind(mpc, offer, caseInfo, verbose)
     newGen(:,6) = 1; % voltage magnitude setpoint
     newGen(:,7) = 100; % MVA base
     newGen(:,8) = 1; % gen status
-    newGen(:,9) = Inf; % PMAX
+    newGen(:,9) = newCap; % PMAX
     newGen(:,18) = Inf; % ramp rate for 10 min 
 
     % Add new gencost table
@@ -64,7 +65,7 @@ function [mpc, offer] = buildWind(mpc, offer, caseInfo, verbose)
 
     % Add new offer table
     newOffer(:, 1) = sum(genInfo{iGeninfo, {'Cost2Keep', 'Cost2Build', 'Tax', 'Insurance'}}, 2); % fixed cost
-    newOffer(:, 2) = windInfo{:, 'Cap'}; % Installed Cap
+    newOffer(:, 2) = newCap; % Installed Cap
     newOffer(:, 3) = 0;
     newOffer(:, 4) = Inf;
 

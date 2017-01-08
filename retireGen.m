@@ -30,11 +30,14 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
     % Choose which group to apply retirement
     if strcmp(group, 'new')
         idxRetire = (mpc.newgen == 1);
+    elseif strcmp(group, 'all')
+
     end
 
     % Set PositiveReserveCap to used capacity    
     usedCap(idxSmall) = 0;
     offer(idxRetire, 2) = usedCap(idxRetire, 1);
+    mpc.gen(idxRetire, 9) = usedCap(idxRetire, 1); % PMAX
 
     % Remove the cost to build,ngt-3,ngcc-9,solar-13,6-wind,, 1-cost to keep    
     isBuilt = mpc.newgen == 1;  
@@ -47,7 +50,11 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
     end
 
     % Label the gen built in previous decades (newgen - 1)
-    mpc.newgen = mpc.newgen - 1;   
+    if strcmp(group, 'new')
+
+    elseif strcmp(group, 'all')            
+        mpc.newgen = mpc.newgen - 1; 
+    end  
 
     % Delete gen that used caps are zeros    
     idx = idxSmall & idxRetire;

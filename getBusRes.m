@@ -44,8 +44,8 @@ function busRes = getBusRes(result, caseInfo)
     busRes.busTable = table(bus, busArea, annualLoads, annualPrices);
 
     %% For optional and additional parts
-    if nargin >= 3
-        busRes.busTable = join(busRes.busTable, locInfo);
+    if isfield(caseInfo, 'locationInfo')
+        busRes.busTable = join(busRes.busTable, caseInfo.locationInfo);
     end
 
     %% Calclate system result

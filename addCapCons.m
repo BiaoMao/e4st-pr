@@ -51,7 +51,7 @@ function mpc = addCapCons(mpc, caseInfo, group, verbose)
     % Update in mpc to make equality constraints
     mpc.caplim.map = map;
     mpc.caplim.max = cap;
-    % mpc.caplim.min = cap;
+    %mpc.caplim.min = cap;
 
     % Debug information
     if verbose == 1

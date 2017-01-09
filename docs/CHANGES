@@ -1,0 +1,85 @@
+-------------------------
+ Change history for E4ST
+-------------------------
+
+Version:    1.0b2
+
+E4ST
+Copyright (c) 2008-2017 by Power System Engineering Research Center (PSERC)
+by Ray Zimmerman, PSERC Cornell
+See http://e4st.com/ for more info.
+
+
+Changes since 1.0b2
+-------------------
+
+1/9/17
+    - Fix bug in shadow price of total_output constraints.
+    - Add inputs for total_output constraint to results struct.
+    - Add inputs and outputs for caplim constraints to results struct.
+    - Reduce problem size by removing legacy physical ramping constraints
+      between "base" and other hour types.
+    - Reduce problem size further by removing legacy inc/dec variables
+      and corresponding constraints.
+
+12/26/16
+    - Fix bug for cases with interface limits that are defined (in
+      mpc.if.map) but not constrained (included in mpc.if.lims).
+    - Fix bug that caused numerous shadow prices to be indexed wrongly
+      when maxbuild limits were used.
+    - Added lower limit on build capacity of subsets of generators to
+      complement existing maxbuild restrictions. Renamed input parameters:
+        mpc.maxbuild.map      --> mpc.caplim.map
+        mpc.maxbuild.capacity --> mpc.caplim.max
+      and added optional mpc.caplim field: mpc.caplim.min.
+    - Improve testing of E4ST, i.e. e4st_solve(), including testing
+      of new lower limit on build capacity (add t_e4st_caplim.m).
+
+
+Changes since 1.0b1
+-------------------
+
+2/18/16
+    - Release version 1.0b2.
+
+2/16/16
+    - New manual in LaTeX.
+
+2/10/16
+    - Modifications to make code compatible with non-public data cases.
+
+1/29/16
+    - Rename variables and files to E4ST*.
+
+1/28/16
+    - Add option interface and set default solver.
+
+1/26/16
+    - Add extras/feval_w_path.m.
+
+
+Changes since fork
+------------------
+
+1/4/16
+    - Release version 1.0b1.
+    - Update User's manual.
+    - Remove extraneous trailing'\' from paths in LtInputFiles.m.
+
+1/3/16
+    - Create 3-bus tests model.
+    - Remove code files related to specific runs or specific machines.
+
+12/23/15
+    - Merge in setup code files from Biao.
+
+12/21/15
+    - Add e4st_ver().
+    - Use apply_changes() instead of apply_contingency() (included
+      in extras directory), since apply_changes() and idx_ct() are expected
+      to be included in MATPOWER 6.
+    - Minor edits to output text headers.
+    - Fork e4st from sopf and rename functions:
+        c3sopfi() -> e4st_solve()
+        sopf_args() -> e4st_args()
+        offer2mat() -> e4st_offer2mat()

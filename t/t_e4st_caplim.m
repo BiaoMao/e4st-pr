@@ -16,7 +16,7 @@ if nargin < 1
     quiet = 0;
 end
 
-n_tests = 221;
+n_tests = 206;
 
 t_begin(n_tests, quiet);
 
@@ -334,7 +334,7 @@ if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
     ebuilt = [s.results.energy.Gmax(13:2:24) s.results.energy.Gmax(14:2:24)];
 %    sum(built)
 %    sum(sum(built))
-    t_is(built, ebuilt, 12, t);
+    t_is(built, ebuilt, 11, t);
     t_is(sum(built)', sum_ebuilt, 5, t);
     if k > 1
         t = 'caplim.qty';
@@ -387,12 +387,6 @@ if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
     t = 'results.energy.prc.sum_bus_lam_q';
     t_is(results.energy.prc.sum_bus_lam_q, s.results.energy.prc.sum_bus_lam_q, 5, t);
 
-    t = 'results.energy.delta.qty.P_pos';
-    t_is(results.energy.delta.qty.P_pos, s.results.energy.delta.qty.P_pos, 6, t);
-
-    t = 'results.energy.delta.qty.P_neg';
-    t_is(results.energy.delta.qty.P_neg, s.results.energy.delta.qty.P_neg, 6, t);
-
 %     g1 = sum(results.energy.delta.mu.P_pos_GEQ0, 2);
 %     g2 = sum(results.energy.delta.mu.P_neg_GEQ0, 2);
 %     e1 = sum(s.results.energy.delta.mu.P_pos_GEQ0, 2);
@@ -402,9 +396,6 @@ if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
 % %     t_is(g1, e1, 5, t);
 % %     t_is(g2, e2, 5, t);
 %     t_is(g1+g2, e1+e2, 5, t);
-
-    t = 'results.energy.mu.Ramp_P_max';
-    t_is(results.energy.mu.Ramp_P_max, s.results.energy.mu.Ramp_P_max, 5, t);
 
     t = 'results.energy.mu.alphaP';
     g3 = results.energy.mu.alphaP;

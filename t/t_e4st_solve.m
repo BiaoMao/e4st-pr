@@ -15,7 +15,7 @@ if nargin < 1
     quiet = 0;
 end
 
-n_tests = 344;
+n_tests = 334;
 
 t_begin(n_tests, quiet);
 
@@ -154,14 +154,14 @@ roffer = [
     10      30      10      30      0       0;
     10      20      10      20      0       0;
     10      25      10      25      0       0;
-    20      25      20      25      60      60;
-    20      15      20      15      15      15;
-    20      30      20      30      60      60;
-    20      15      20      15      15      15;
-    30      15      30      15      60      60;
-    30      30      30      30      30      30;
-    30      25      30      25      60      60;
-    30      30      30      30      30      30;
+    20      25      20      25      0       0;
+    20      15      20      15      0       0;
+    20      30      20      30      0       0;
+    20      15      20      15      0       0;
+    30      15      30      15      0       0;
+    30      30      30      30      0       0;
+    30      25      30      25      0       0;
+    30      30      30      30      0       0;
     0.001   50      0.002   50      0       0;
     0.001   50      0.002   50      0       0;
     0.001   50      0.002   50      0       0;
@@ -185,27 +185,25 @@ roffer = [
 ];
 
 %% contingency table
-% label probty  type        row column      chgtype newvalue
+% label probty  type        row column          chgtype newvalue
 contab = [
-    1   0.002   CT_TBRCH    1   BR_STATUS   CT_REP  0;      %% line 1-2
-    2   0.002   CT_TBRCH    2   BR_STATUS   CT_REP  0;      %% line 1-3, all power from gen1 flows via gen2
-    3   0.002   CT_TBRCH    3   BR_STATUS   CT_REP  0;      %% line 2-4, a path to loads @ buses 7 & 8
-    4   0.002   CT_TBRCH    5   BR_STATUS   CT_REP  0;      %% line 2-5, a path to loads @ buses 7 & 8
-    5   0.002   CT_TBRCH    6   BR_STATUS   CT_REP  0;      %% line 2-6, a path to loads @ buses 7 & 8
-    6   0.002   CT_TBRCH    36  BR_STATUS   CT_REP  0;      %% line 28-27, tie line between areas 1 & 3
-    7   0.002   CT_TBRCH    15  BR_STATUS   CT_REP  0;      %% line 4-12, tie line between areas 1 & 2
-    8   0.002   CT_TBRCH    12  BR_STATUS   CT_REP  0;      %% line 6-10, tie line between areas 1 & 3
-    9   0.002   CT_TBRCH    14  BR_STATUS   CT_REP  0;      %% line 9-10, tie line between areas 1 & 3
-    10  0.002   CT_TGEN     1   GEN_STATUS  CT_REP  0;      %% gen 1 at bus 1
-    11  0.002   CT_TGEN     2   GEN_STATUS  CT_REP  0;      %% gen 2 at bus 2
-    12  0.002   CT_TGEN     3   GEN_STATUS  CT_REP  0;      %% gen 3 at bus 22
-    13  0.002   CT_TGEN     4   GEN_STATUS  CT_REP  0;      %% gen 4 at bus 27
-    14  0.002   CT_TGEN     5   GEN_STATUS  CT_REP  0;      %% gen 5 at bus 23
-    15  0.002   CT_TGEN     6   GEN_STATUS  CT_REP  0;      %% gen 6 at bus 13
-    20  0.010   CT_TGEN     0   PMIN        CT_REL  1.1;    %% 10% load increase
-    20  0.010   CT_TGEN     0   QMIN        CT_REL  1.1;
-    21  0.010   CT_TGEN     0   PMIN        CT_REL  0.9;    %% 10% load decrease
-    21  0.010   CT_TGEN     0   QMIN        CT_REL  0.9;
+    1   0.002   CT_TBRCH    1   BR_STATUS       CT_REP  0;      %% line 1-2
+    2   0.002   CT_TBRCH    2   BR_STATUS       CT_REP  0;      %% line 1-3, all power from gen1 flows via gen2
+    3   0.002   CT_TBRCH    3   BR_STATUS       CT_REP  0;      %% line 2-4, a path to loads @ buses 7 & 8
+    4   0.002   CT_TBRCH    5   BR_STATUS       CT_REP  0;      %% line 2-5, a path to loads @ buses 7 & 8
+    5   0.002   CT_TBRCH    6   BR_STATUS       CT_REP  0;      %% line 2-6, a path to loads @ buses 7 & 8
+    6   0.002   CT_TBRCH    36  BR_STATUS       CT_REP  0;      %% line 28-27, tie line between areas 1 & 3
+    7   0.002   CT_TBRCH    15  BR_STATUS       CT_REP  0;      %% line 4-12, tie line between areas 1 & 2
+    8   0.002   CT_TBRCH    12  BR_STATUS       CT_REP  0;      %% line 6-10, tie line between areas 1 & 3
+    9   0.002   CT_TBRCH    14  BR_STATUS       CT_REP  0;      %% line 9-10, tie line between areas 1 & 3
+    10  0.002   CT_TGEN     1   GEN_STATUS      CT_REP  0;      %% gen 1 at bus 1
+    11  0.002   CT_TGEN     2   GEN_STATUS      CT_REP  0;      %% gen 2 at bus 2
+    12  0.002   CT_TGEN     3   GEN_STATUS      CT_REP  0;      %% gen 3 at bus 22
+    13  0.002   CT_TGEN     4   GEN_STATUS      CT_REP  0;      %% gen 4 at bus 27
+    14  0.002   CT_TGEN     5   GEN_STATUS      CT_REP  0;      %% gen 5 at bus 23
+    15  0.002   CT_TGEN     6   GEN_STATUS      CT_REP  0;      %% gen 6 at bus 13
+    20  0.010   CT_TLOAD    0   CT_LOAD_ALL_PQ  CT_REL  1.1;    %% 10% load increase
+    21  0.010   CT_TLOAD    0   CT_LOAD_ALL_PQ  CT_REL  0.9;    %% 10% load decrease
 ];
 
 if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
@@ -222,8 +220,8 @@ if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
     mpc.gencost(13:end, 5) = mpc.gencost(13:end, 5) + cn.costnoise(1:20, 6);
     roffer(1:12, 1) = roffer(1:12, 1) + cn.costnoise(1:12, 2);
     roffer(1:12, 3) = roffer(1:12, 3) + cn.costnoise(1:12, 3);
-    roffer(5:12, 5) = roffer(5:12, 5) + cn.costnoise(5:12, 4);
-    roffer(5:12, 6) = roffer(5:12, 6) + cn.costnoise(5:12, 5);
+%     roffer(5:12, 5) = roffer(5:12, 5) + cn.costnoise(5:12, 4);
+%     roffer(5:12, 6) = roffer(5:12, 6) + cn.costnoise(5:12, 5);
     
     %% force active contracts to zero
     roffer = e4st_offer2mat(roffer, ng);
@@ -233,7 +231,6 @@ if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
     toc_caps  = { [40; 100; 8.2], [30; 100; 8.2] };
 
     %% load solution results
-    %s = load('t_sopf_soln560');
     solns = {'t_e4st_solve_soln1', 't_e4st_solve_soln2'};
 
     %%-----  run it  -----
@@ -304,49 +301,16 @@ if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
     t = 'results1.energy.prc.sum_bus_lam_q';
     t_is(results1.energy.prc.sum_bus_lam_q, s.results1.energy.prc.sum_bus_lam_q, 5, t);
 
-    t = 'results1.energy.delta.qty.P_pos';
-    t_is(results1.energy.delta.qty.P_pos, s.results1.energy.delta.qty.P_pos, 6, t);
-
-    t = 'results1.energy.delta.qty.P_neg';
-    t_is(results1.energy.delta.qty.P_neg, s.results1.energy.delta.qty.P_neg, 6, t);
-
-    g1 = sum(results1.energy.delta.mu.P_pos_GEQ0, 2);
-    g2 = sum(results1.energy.delta.mu.P_neg_GEQ0, 2);
-    e1 = sum(s.results1.energy.delta.mu.P_pos_GEQ0, 2);
-    e2 = sum(s.results1.energy.delta.mu.P_neg_GEQ0, 2);
-    t = 'results1.energy.delta.mu.P_pos/neg_GEQ0';
-%     t_is(g1-e1, e2-g2, 5, t);
-%     t_is(g1, e1, 5, t);
-%     t_is(g2, e2, 5, t);
-    t_is(g1+g2, e1+e2, 5, t);
-
-    t = 'results1.energy.mu.Ramp_P_max';
-    t_is(results1.energy.mu.Ramp_P_max, s.results1.energy.mu.Ramp_P_max, 5, t);
-
     t = 'results1.energy.mu.alphaP';
     g3 = results1.energy.mu.alphaP;
     e3 = s.results1.energy.mu.alphaP;
 %     t_is(g1-e1, g3-e3, 5, t);
     t_is(g3, e3, 5, t);
 
-%     t = 'results1.energy.sumlamPikplus';
-%     t_is(results1.energy.sumlamPikplus, s.results1.energy.sumlamPikplus, 5, t);
-% 
-%     t = 'results1.energy.sumlamPikminus';
-%     t_is(results1.energy.sumlamPikminus, s.results1.energy.sumlamPikminus, 5, t);
-
-    t = 'results1.energy.(mu.Pc - sumlamPikplus + sumlamPikminus)';
-    g1 =   results1.energy.mu.Pc;
-    e1 = s.results1.energy.mu.Pc;
-    g1 = g1 -   results1.energy.sumlamPikplus;
-    e1 = e1 - s.results1.energy.sumlamPikplus;
-    g1 = g1 +   results1.energy.sumlamPikminus;
-    e1 = e1 + s.results1.energy.sumlamPikminus;
-%     t_is(results1.energy.mu.Pc, s.results1.energy.mu.Pc, 5, t);
-    t_is(g1, e1, 5, t);
+    kp = find(results1.reserve.qty.Rp_pos);
 
     t = 'results1.reserve.mu.Rp_pos';
-    t_is(sum(results1.reserve.mu.Rp_pos, 2), sum(s.results1.reserve.mu.Rp_pos, 2), 5, t);
+    t_is(sum(results1.reserve.mu.Rp_pos(kp, :), 2), sum(s.results1.reserve.mu.Rp_pos(kp, :), 2), 5, t);
 
     t = 'results1.reserve.mu.Rp_neg';
     t_is(sum(results1.reserve.mu.Rp_neg, 2), sum(s.results1.reserve.mu.Rp_neg, 2), 5, t);
@@ -364,7 +328,7 @@ if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
     t_is(results1.reserve.qty.Rp_neg, s.results1.reserve.qty.Rp_neg, 5, t);
 
     t = 'results1.reserve.prc.Rp_pos';
-    t_is(results1.reserve.prc.Rp_pos, s.results1.reserve.prc.Rp_pos, 5, t);
+    t_is(results1.reserve.prc.Rp_pos(kp), s.results1.reserve.prc.Rp_pos(kp), 5, t);
 
     t = 'results1.reserve.prc.Rp_neg';
     t_is(results1.reserve.prc.Rp_neg, s.results1.reserve.prc.Rp_neg, 5, t);

@@ -559,15 +559,7 @@ pcend = pcbas + ng(1) - 1;
 % upward and downward P reserves
 rPpbas = pcend + 1;                rPpend = rPpbas + ng(1) - 1; % positive P reserve
 rPmbas = rPpbas + ng(1);           rPmend = rPmbas + ng(1) - 1; % downward P reserve
-% P deviations from contracted base injections (nc+1 sets of them, one for each flow)
-dPpbas(1) = rPmend + 1;             dPpend(1) = dPpbas(1) + ng(1) - 1;
-dPmbas(1) = dPpbas(1)+ng_total;     dPmend(1) = dPmbas(1) + ng(1) - 1;
-if nc > 0
-  for k = 2:nc+1
-    dPpbas(k) = dPpend(k-1) + 1;    dPpend(k) = dPpbas(k) + ng(k) - 1;
-    dPmbas(k) = dPmend(k-1) + 1;    dPmend(k) = dPmbas(k) + ng(k) - 1;
-  end
-end
+dPmend(k) = rPmend;     % P deviations from contracted base injections (deleted)
 
 % if reactive stuff has prices, generate pointers to reactive contract
 % quantities, reserves and deviations in the vector of optimization variables
@@ -575,15 +567,7 @@ if HAVE_Q
   qcbas = dPmend(nc) + 1;        qcend = qcbas + ng(1) - 1;
   rQpbas = qcend + 1;            rQpend = rQpbas + ng(1) - 1; % upward Q reserve
   rQmbas = rQpend + 1;           rQmend = rQmbas + ng(1) - 1; % downward Q reserve
-  % Q deviations from base flow
-  dQpbas(1) = rQmend + 1;        dQpend(1) = dQpbas(1) + ng(1) - 1;
-  dQmbas(1) = dQpbas(1)+ng_total; dQmend(1) = dQmbas(1) + ng(1) - 1;
-  if nc > 0
-    for k = 2:nc+1
-      dQpbas(k) = dQpend(k-1) + 1;   dQpend(k) = dQpbas(k) + ng(k) - 1;
-      dQmbas(k) = dQmend(k-1) + 1;   dQmend(k) = dQmbas(k) + ng(k) - 1;
-    end
-  end
+  dQmend(k) = rQmend;  % Q deviations from base flow (deleted)
   nvars = dQmend(nc+1);  % last variable when reactive portion is considered
 else
   nvars = dPmend(nc+1);  % last variable when reactive portion not considered.
@@ -834,7 +818,7 @@ aug_gen_stat = [ ones(ng(1),1) gen_stat]; % table includes base case column
 A1 = sparse((1:ng(1))', (rPpbas:rPpend)', -ones(ng(1),1), ng(1), nvars);
 %l1 = -min(PositiveActiveReserveQuantity, gen(:, RAMP_10)) / baseMVA;
 l1 = -PositiveActiveReserveQuantity / baseMVA;
-u1 = Inf(ng(1),1);
+u1 = zeros(ng(1),1);
 lc1bas = stend(nc+1)+size(Au,1) + 1;    % linear constraint set 1 start index
 lc1end = lc1bas + ng(1)-1;              % linear constraint set 1 end index
 % Now define ng(1) downward P reserve variables via rpm <= rpmmax,
@@ -842,26 +826,11 @@ lc1end = lc1bas + ng(1)-1;              % linear constraint set 1 end index
 A2 = sparse((1:ng(1))', (rPmbas:rPmend)', -ones(ng(1),1), ng(1), nvars);
 %l2 = -min(NegativeActiveReserveQuantity, gen(:, RAMP_10)) / baseMVA;
 l2 = -NegativeActiveReserveQuantity / baseMVA;
-u2 = Inf(ng(1), 1);
+u2 = zeros(ng(1), 1);
 lc2bas = lc1end + 1;
 lc2end = lc2bas + ng(1) - 1;
-% The actual deviations from base flow must not exceed physical ramp rates
-% we'll get negative multiplier for right bound, fix when picking up lambdas
+% (deleted) physical ramp constraints
 A3 = sparse(0,0); l3 = []; u3 = [];
-for k = 2:nc+1
-  ramp10k = Augmented_gen(sum(ng(1:k-1)) + (1:ng(k)), RAMP_10);
-  ii = find(aug_gen_stat(:, k) > 0); % which gens active in kth flow
-  A3 = [ A3 ;
-         sparse([ 1:ng(k)           1:ng(k)]', ...
-                [ pgbas(1)-1+ii;    (pgbas(k):pgend(k))' ], ...
-                [ -ones(ng(k),1);   ones(ng(k),1)        ], ...
-                ng(k), nvars)
-        ];
-  l3 = [ l3;
-         -ramp10k/baseMVA ];
-  u3 = [ u3;
-         ramp10k/baseMVA  ];
-end
 lc3bas = lc2end + 1;
 lc3end = lc3bas + size(A3,1) - 1;
 % alpha-controlled equality of Pi0 and Pc
@@ -908,31 +877,24 @@ end
 lc4Cbas = lc4Bend + 1;
 lc4Cend = lc4Cbas + nclb - 1;
 
-% The increment variables from the base case for generators active in kth
-% flow cannot be negative. 0 <= dPp
+% (deleted) incs non-negative
 A5 = sparse(0,0); l5 = []; u5 = [];
-for k = 1:nc+1
-  ii = find(aug_gen_stat(:, k) > 0); % which gens active in kth flow
-  A5 = [ A5;
-        sparse((1:ng(k))', (dPpbas(k):dPpend(k))', ones(ng(k),1), ng(k), nvars) ];
-  l5 = [ l5; zeros(ng(k),1) ];
-  u5 = [ u5; 
-         Inf(length(ii), 1) ];
-end
 lc5bas = lc4Cend + 1;
 lc5end = lc5bas + size(A5, 1) - 1;
-% The positive reserve variables (times availability factors) are larger
-% than all increment variables in all flows. 0 <= avail_fac * rPp - dPp.
+% The Pg minus positive reserve variables (times availability factors) are
+% smaller than Pc in all flows. Pg - avail_fac * rPp - Pc <= 0.
 % Note that these are the constraints that set
 % the shadow price on the upward reserve variables
 A6 = sparse(0,0); l6 = []; u6 = [];
 for k = 1:nc+1
   ii = find(aug_gen_stat(:, k) > 0); % which gens active in kth flow
   A6 = [ A6 ;
-      sparse( [1:ng(k) 1:ng(k)]', [(rPpbas-1)+ii; (dPpbas(k):dPpend(k))' ], ...
-              [avail_fac(ii, k); -ones(ng(k),1)], ng(k), nvars) ];
-  l6 = [ l6 ;  zeros(ng(k),1)];
-  u6 = [ u6 ; Inf(length(ii), 1) ];
+      sparse( [1:ng(k)               1:ng(k)           1:ng(k)]', ...
+              [(pgbas(k):pgend(k))'; rPpbas-1+ii;      pcbas(1)-1+ii ], ...
+              [ones(ng(k),1);       -avail_fac(ii, k); -ones(ng(k),1) ], ...
+              ng(k), nvars) ];
+  l6 = [ l6 ; -Inf(ng(k), 1) ];
+  u6 = [ u6 ; zeros(ng(k), 1) ];
 end
 lc6bas = lc5end + 1;
 lc6end = lc6bas + size(A6,1) - 1;
@@ -958,49 +920,30 @@ end
 lc7Bbas = lc6end + 1;
 lc7Bend = lc7Bbas + size(A7B,1) - 1;
 
-% The decrement variables from the base case for generators active in kth 
-% flow cannot be negative. 0 <= dPm
+% (deleted) decs non-negative
 A8 = sparse(0,0); l8 = []; u8 = [];
-for k = 1:nc+1
-  ii = find(aug_gen_stat(:, k) > 0); % which gens active in kth flow
-  A8 = [ A8;
-        sparse((1:ng(k))', (dPmbas(k):dPmend(k))', ones(ng(k),1), ng(k), nvars) ];
-  l8 = [ l8; zeros(ng(k),1) ];
-  u8 = [ u8; 
-         Inf(length(ii), 1) ];
-end
 lc8bas = lc7Bend + 1;
 lc8end = lc8bas + size(A8, 1) - 1;
-% The negative reserve variables are larger than all decrement variables in all
-% flows. 0 <= rPm - dPm . Note that these are the constraints that set
+% The Pg plus negative reserve variables (times availability factors) are
+% larger than Pc in all flows. Pg + avail_fac * rPm - Pc >= 0.
+% Note that these are the constraints that set
 % the shadow prices on the downward reserve variables.
 A9 = sparse(0,0); l9 = []; u9 = [];
 for k = 1:nc+1
   ii = find(aug_gen_stat(:, k) > 0); % which gens active in kth flow
   A9 = [ A9 ;
-      sparse(   [ 1:ng(k)          1:ng(k)]', ...
-             [(rPmbas-1)+ii; (dPmbas(k):dPmend(k))' ], ...
-              [ones(ng(k),1); -ones(ng(k),1)], ng(k), nvars) ];
-  l9 = [ l9 ;  zeros(ng(k),1)];
-  u9 = [ u9 ; Inf(length(ii), 1) ];
+      sparse( [1:ng(k)               1:ng(k)           1:ng(k)]', ...
+              [(pgbas(k):pgend(k))'; rPmbas-1+ii;      pcbas(1)-1+ii ], ...
+              [ones(ng(k),1);        avail_fac(ii, k); -ones(ng(k),1) ], ...
+              ng(k), nvars) ];
+  l9 = [ l9 ; zeros(ng(k), 1) ];
+  u9 = [ u9 ; Inf(ng(k), 1) ];
 end
 lc9bas = lc8end + 1;
 lc9end = lc9bas + size(A9,1) - 1;
-% the difference between the injection and the contract
+% (deleted) the difference between the injection and the contract
 % is equal to the inc minus the dec: Pik - Pci = dPp - dPm
 A10 = sparse(0,0); l10 = []; u10 = [];
-for k = 1:nc+1
-  ii = find(aug_gen_stat(:, k) > 0); % which gens active in kth flow
-  A10 = [ A10 ;
-      sparse( [  1:ng(k)           1:ng(k)          1:ng(k)                 1:ng(k)]', ...
-           [ (pgbas(k):pgend(k))'; pcbas(1)-1+ii;  (dPpbas(k):dPpend(k))'; (dPmbas(k):dPmend(k))'],...
-           [  ones(ng(k),1);       -ones(ng(k),1); -ones(ng(k),1);          ones(ng(k),1) ], ...
-              ng(k), nvars)  ];
-  l10 = [ l10 ;
-         zeros(ng(k),1) ];
-  u10 = [ u10 ;
-         zeros(ng(k),1) ];
-end
 lc10bas = lc9end + 1;
 lc10end = lc10bas + size(A10,1) - 1;
 
@@ -1014,14 +957,14 @@ if HAVE_Q
   % multipliers, so we rewrite this as -rqpmax <= -rqp
   A11 = sparse((1:ng(1))', (rQpbas:rQpend)', -ones(ng(1),1), ng(1), nvars);
   l11 = -PositiveReactiveReserveQuantity / baseMVA;
-  u11 = Inf(ng(1),1);
+  u11 = zeros(ng(1),1);
   lc11bas = lc10end + 1;        % linear constraint set 11 start index
   lc11end = lc11bas + ng(1)-1;  % linear constraint set 11 end index
   % Now define ng(1) downward Q reserve variables via rqm <= rqmmax,
   % or, for the reasons explained above, as -rqmmax <= -rqm.
   A12 = sparse((1:ng(1))', (rQmbas:rQmend)', -ones(ng(1),1), ng(1), nvars);
   l12 = -NegativeReactiveReserveQuantity / baseMVA;
-  u12 = Inf(ng(1), 1);
+  u12 = zeros(ng(1), 1);
   lc12bas = lc11end + 1;
   lc12end = lc12bas + ng(1) - 1;
   % The actual deviations from base flow must not exceed ramp rates
@@ -1057,76 +1000,51 @@ if HAVE_Q
   u14B = ReactiveContractMax / baseMVA;
   lc14Bbas = lc14end + 1;
   lc14Bend = lc14Bbas + ng(1) - 1;
-  % The increment variables from the base case for generators active in kth 
-  % flow cannot be negative. 0 <= dQp
+  % (deleted) incs non-negative
   A15 = sparse(0,0); l15 = []; u15 = [];
-  for k = 1:nc+1
-    ii = find(aug_gen_stat(:, k) > 0); % which gens active in kth flow
-    A15 = [ A15;
-          sparse((1:ng(k))', (dQpbas(k):dQpend(k))', ones(ng(k),1), ng(k), nvars) ];
-    l15 = [ l15; zeros(ng(k),1) ];
-    u15 = [ u15; 
-            Inf(length(ii), 1) ];
-  end
   lc15bas = lc14Bend + 1;
   lc15end = lc15bas + size(A15, 1) - 1;
-  % The positive reserve variables are larger than all increment variables in all
-  % flows. 0 <= rPp - dPp. Note that these are the constraints that set
+  % The Qg minus positive reserve variables (times availability factors) are
+  % smaller than Qc in all flows. Qg - avail_fac * rQp - Qc <= 0.
+  % Note that these are the constraints that set
   % the shadow price on the upward reserve variables
   A16 = sparse(0,0); l16 = []; u16 = [];
   for k = 1:nc+1
     ii = find(aug_gen_stat(:, k) > 0); % which gens active in kth flow
     A16 = [ A16 ;
-        sparse( [1:ng(k) 1:ng(k)]', [(rQpbas-1)+ii; (dQpbas(k):dQpend(k))' ], ...
-                [ones(ng(k),1); -ones(ng(k),1)], ng(k), nvars) ];
-    l16 = [ l16 ;  zeros(ng(k),1)];
-    u16 = [ u16 ; Inf(length(ii), 1) ];
+        sparse( [1:ng(k)               1:ng(k)           1:ng(k)]', ...
+                [(qgbas(k):pgend(k))'; rQpbas-1+ii;      qcbas(1)-1+ii ], ...
+                [ones(ng(k),1);       -avail_fac(ii, k); -ones(ng(k),1) ], ...
+                ng(k), nvars) ];
+    l16 = [ l16 ; -Inf(ng(k), 1) ];
+    u16 = [ u16 ; zeros(ng(k), 1) ];
   end
   lc16bas = lc15end + 1;
   lc16end = lc16bas + size(A16,1) - 1;
-  % The decrement variables from the base case for generators active in kth 
-  % flow cannot be negative. 0 <= dQm
+  % (deleted) decs non-negative
   A18 = sparse(0,0); l18 = []; u18 = [];
-  for k = 1:nc+1
-    ii = find(aug_gen_stat(:, k) > 0); % which gens active in kth flow
-    A18 = [ A18;
-          sparse((1:ng(k))', (dQmbas(k):dQmend(k))', ones(ng(k),1), ng(k), nvars) ];
-    l18 = [ l18; zeros(ng(k),1) ];
-    u18 = [ u18; 
-            Inf(length(ii), 1) ];
-  end
   lc18bas = lc16end + 1;
   lc18end = lc18bas + size(A18, 1) - 1;
-  % The negative reserve variables are larger than all decrement variables in all
-  % flows. 0 <= rQm - dQm . Note that these are the constraints that set
+  % The Qg plus negative reserve variables (times availability factors) are
+  % larger than Qc in all flows. Qg + avail_fac * rQm - Qc >= 0.
+  % Note that these are the constraints that set
   % the shadow prices on the downward reserve variables.
   A19 = sparse(0,0); l19 = []; u19 = [];
   for k = 1:nc+1
     ii = find(aug_gen_stat(:, k) > 0); % which gens active in kth flow
     A19 = [ A19 ;
-        sparse(   [ 1:ng(k)          1:ng(k)]', ...
-               [(rQmbas-1)+ii; (dQmbas(k):dQmend(k))' ], ...
-                [ones(ng(k),1); -ones(ng(k),1)], ng(k), nvars) ];
-    l19 = [ l19 ;  zeros(ng(k),1)];
-    u19 = [ u19 ; Inf(length(ii), 1) ];
+        sparse( [1:ng(k)               1:ng(k)           1:ng(k)]', ...
+                [(qgbas(k):pgend(k))'; rQmbas-1+ii;      qcbas(1)-1+ii ], ...
+                [ones(ng(k),1);        avail_fac(ii, k); -ones(ng(k),1) ], ...
+                ng(k), nvars) ];
+    l19 = [ l19 ; zeros(ng(k), 1) ];
+    u19 = [ u19 ; Inf(ng(k), 1) ];
   end
   lc19bas = lc18end + 1;
   lc19end = lc19bas + size(A19,1) - 1;
-  % the difference between the injection and the contract
+  % (deleted) the difference between the injection and the contract
   % is equal to the inc minus the dec: Qik - Qci = dQp - dQm
   A20 = sparse(0,0); l20 = []; u20 = [];
-  for k = 1:nc+1
-    ii = find(aug_gen_stat(:, k) > 0); % which gens active in kth flow
-    A20 = [ A20 ;
-        sparse( [  1:ng(k)           1:ng(k)          1:ng(k)                 1:ng(k)]', ...
-             [ (qgbas(k):qgend(k))'; qcbas(1)-1+ii;  (dQpbas(k):dQpend(k))'; (dQmbas(k):dQmend(k))'],...
-             [ ones(ng(k),1);       -ones(ng(k),1);  -ones(ng(k),1);          ones(ng(k),1) ], ...
-                ng(k), nvars)  ];
-    l20 = [ l20 ;
-           zeros(ng(k),1) ];
-    u20 = [ u20 ;
-           zeros(ng(k),1) ];
-  end
   lc20bas = lc19end + 1;
   lc20end = lc20bas + size(A20,1) - 1;
 else
@@ -1204,13 +1122,6 @@ if HAVE_Q
   Cr(rQpbas:rQpend) = PositiveReactiveReservePrice;
   Cr(rQmbas:rQmend) = NegativeReactiveReservePrice;
 end
-% add costs on increments/decrements for base case
-Cr(dPpbas(1):dPpend(1)) = prob0 * PositiveActiveDeltaPrice;
-Cr(dPmbas(1):dPmend(1)) = prob0 * NegativeActiveDeltaPrice;
-if HAVE_Q
-  Cr(dQpbas(1):dQpend(1)) = prob0 * PositiveReactiveDeltaPrice;
-  Cr(dQmbas(1):dQmend(1)) = prob0 * NegativeReactiveDeltaPrice;
-end
 if HAVE_QUADRATIC       % we have quadratic terms
   h = zeros(nvars, 1);
   h(rPpbas:rPpend) = PositiveActiveReservePrice2;
@@ -1218,33 +1129,6 @@ if HAVE_QUADRATIC       % we have quadratic terms
   if HAVE_Q
     h(rQpbas:rQpend) = PositiveReactiveReservePrice2;
     h(rQmbas:rQmend) = NegativeReactiveReservePrice2;
-  end
-  % add costs on increments/decrements for base case
-  h(dPpbas(1):dPpend(1)) = prob0 * PositiveActiveDeltaPrice2;
-  h(dPmbas(1):dPmend(1)) = prob0 * NegativeActiveDeltaPrice2;
-  if HAVE_Q
-    h(dQpbas(1):dQpend(1)) = prob0 * PositiveReactiveDeltaPrice2;
-    h(dQmbas(1):dQmend(1)) = prob0 * NegativeReactiveDeltaPrice2;
-  end
-end
-% now insert costs on decrements/increments for contingency flows
-for k = 1:nc
-  ii = find(gen_stat(:, k) > 0);
-  jj = find(contab(:, CT_LABEL) == clist(k));
-  p = contab(jj(1), CT_PROB);
-  Cr(dPpbas(k+1):dPpend(k+1)) = p * PositiveActiveDeltaPrice(ii);
-  Cr(dPmbas(k+1):dPmend(k+1)) = p * NegativeActiveDeltaPrice(ii);
-  if HAVE_Q
-    Cr(dQpbas(k+1):dQpend(k+1)) = p * PositiveReactiveDeltaPrice(ii);
-    Cr(dQmbas(k+1):dQmend(k+1)) = p * NegativeReactiveDeltaPrice(ii);
-  end
-  if HAVE_QUADRATIC       % we have quadratic terms
-    h(dPpbas(k+1):dPpend(k+1)) = p * PositiveActiveDeltaPrice2(ii);
-    h(dPmbas(k+1):dPmend(k+1)) = p * NegativeActiveDeltaPrice2(ii);
-    if HAVE_Q
-      h(dQpbas(k+1):dQpend(k+1)) = p * PositiveReactiveDeltaPrice2(ii);
-      h(dQmbas(k+1):dQmend(k+1)) = p * NegativeReactiveDeltaPrice2(ii);
-    end
   end
 end
 if HAVE_QUADRATIC       % we have quadratic terms
@@ -1356,75 +1240,43 @@ Pik = zeros(ng(1), nc+1);
 Qik = zeros(ng(1), nc+1);
 lamPik = zeros(ng(1), nc+1);
 lamQik = zeros(ng(1), nc+1);
-dPplus = zeros(ng(1), nc+1);
-dPminus = zeros(ng(1), nc+1);
 Pik(:, 1) = geno(1:ng(1), PG);  % the base case dispatch
 Qik(:, 1) = geno(1:ng(1), QG);
 Pc = baseMVA * xr(pcbas:pcend); % the contract active dispatch
-dPplus(:, 1) = baseMVA * xr(dPpbas(1):dPpend(1)); % delta P+ base case, will
-dPminus(:, 1) = baseMVA * xr(dPmbas(1):dPmend(1)); % need consistency check
 if HAVE_Q
   Qc = baseMVA * xr(qcbas:qcend); % the contracted reactive dispatch
-  dQplus = zeros(ng(1), nc+1);
-  dQminus = zeros(ng(1), nc+1);
-  dQplus(:, 1) = baseMVA * xr(dQpbas(1):dQpend(1));
-  dQminus(:, 1) = baseMVA * xr(dQmbas(1):dQmend(1));
 end
 lamPik(:, 1) = buso(geno(1:ng(1), GEN_BUS), LAM_P); % base case multipliers
 lamQik(:, 1) = buso(geno(1:ng(1), GEN_BUS), LAM_Q);
 lamRPp_GT_dPpik = zeros(ng(1), nc+1);
-lamRPp_GT_dPpik(:, 1) = pimul(lc6bas-1+(1:ng(1))) / baseMVA;
+lamRPp_GT_dPpik(:, 1) = -pimul(lc6bas-1+(1:ng(1))) / baseMVA;
 lamRPm_GT_dPmik = zeros(ng(1), nc+1);
 lamRPm_GT_dPmik(:, 1) = pimul(lc9bas-1+(1:ng(1))) / baseMVA;
-temp = -pimul(lc10bas-1+(1:ng(1))) / baseMVA;
-lamPikplus = zeros(ng(1), nc+1);
-lamPikplus(temp > 0, 1) = temp(temp > 0);
-lamPikminus = zeros(ng(1), nc+1);
-lamPikminus(temp < 0, 1) = -temp(temp < 0);
-lamPikp_GT_0 = zeros(ng(1), nc+1);
-lamPikp_GT_0(:, 1) = pimul(lc5bas-1+(1:ng(1))) / baseMVA;
-lamPikm_GT_0 = zeros(ng(1), nc+1);
-lamPikm_GT_0(:, 1) = pimul(lc8bas-1+(1:ng(1))) / baseMVA;
-lamPhysRamp = zeros(ng(1), nc);
 
-%lamRPplusmax = max(0,pimul(lc1bas:lc1end)/baseMVA); % upward reserve -ramp <= -Rp+ <= 0
-lamRPplusmax = pimul(lc1bas:lc1end)/baseMVA; % upward reserve -ramp <= -Rp+ <= 0
+lamRPplusmax = max(0,pimul(lc1bas:lc1end)/baseMVA); % upward reserve -ramp <= -Rp+ <= 0
+%lamRPplusmax = pimul(lc1bas:lc1end)/baseMVA; % upward reserve -ramp <= -Rp+ <= 0
 %lamRPplusmin = min(0,pimul(lc1bas:lc1end)/baseMVA); % negative means 0 limit binding
-%lamRPminusmax = max(0,pimul(lc2bas:lc2end)/baseMVA); % downward reserve -ramp <= -Rp- <= 0
-lamRPminusmax = pimul(lc2bas:lc2end)/baseMVA; % downward reserve -ramp <= -Rp- <= 0
+lamRPminusmax = max(0,pimul(lc2bas:lc2end)/baseMVA); % downward reserve -ramp <= -Rp- <= 0
+%lamRPminusmax = pimul(lc2bas:lc2end)/baseMVA; % downward reserve -ramp <= -Rp- <= 0
 %lamRPminusmin = min(0,pimul(lc2bas:lc2end)/baseMVA);
 lam_alpha = -pimul(lc4bas-1+(1:ng(1))) / baseMVA;
 lam_Pc = -pimul(lc4Bbas-1+(1:ng(1))) / baseMVA;
 
 if HAVE_Q
   lamRQp_GT_dQpik = zeros(ng(1), nc);
-  lamRQp_GT_dQpik(:, 1) = pimul(lc16bas-1+(1:ng(1))) / baseMVA;
+  lamRQp_GT_dQpik(:, 1) = -pimul(lc16bas-1+(1:ng(1))) / baseMVA;
   lamRQm_GT_dQmik = zeros(ng(1), nc);
   lamRQm_GT_dQmik(:, 1) = pimul(lc19bas-1+(1:ng(1))) / baseMVA;
   lamQikplus = zeros(ng(1), nc+1);
-  temp = -pimul(lc20bas-1+(1:ng(1))) / baseMVA;
-  lamQikplus(temp > 0, 1) = temp(temp > 0);
-  lamQikminus = zeros(ng(1), nc+1);
-  lamQikminus(temp < 0, 1) = -temp(temp < 0);
-  lamQikp_GT_0 = zeros(ng(1), nc+1);
-  lamQikp_GT_0(:, 1) = pimul(lc15bas-1+(1:ng(1))) / baseMVA;
-  lamQikm_GT_0 = zeros(ng(1), nc+1);
-  lamQikm_GT_0(:, 1) = pimul(lc18bas-1+(1:ng(1))) / baseMVA;
-  lamPhysRampQ = zeros(ng(1), nc);
   lamRQplusmax = pimul(lc11bas:lc11end) / baseMVA;
   lamRQminusmax = pimul(lc12bas:lc12end) / baseMVA;
   lam_alphaQ = -pimul(lc14bas-1+(1:ng(1))) / baseMVA;
   lam_Qc = -pimul(lc14Bbas-1+(1:ng(1))) / baseMVA;
 else
-  dQplus = [];
-  dQminus = [];
   lamRQp_GT_dQpik = [];
   lamRQm_GT_dQmik = [];
   lamQikplus = [];
   lamQikminus = [];
-  lamQikp_GT_0 = [];
-  lamQikm_GT_0 = [];
-  lamPhysRampQ = [];
   lamRQplusmax = [];
   lamRQminusmax = [];
   lam_alphaQ = [];
@@ -1435,33 +1287,13 @@ for k = 1:nc+1
   ii = find(aug_gen_stat(:, k) > 0);
   Pik(ii, k) = geno(sum(ng(1:k-1))+1:sum(ng(1:k)), PG); % this is how to pick from augm Gen table, works for k=1
   Qik(ii, k) = geno(sum(ng(1:k-1))+1:sum(ng(1:k)), QG); % because sum(empty) = 0.
-  dPplus(ii, k) = baseMVA * xr(dPpbas(k):dPpend(k)); % delta P+ for each contingency
-  dPminus(ii, k) = baseMVA * xr(dPmbas(k):dPmend(k));
   lamPik(ii, k) = buso(geno(sum(ng(1:k-1))+1:sum(ng(1:k)), GEN_BUS), LAM_P);
   lamQik(ii, k) = buso(geno(sum(ng(1:k-1))+1:sum(ng(1:k)), GEN_BUS), LAM_Q);  
-  lamRPp_GT_dPpik(ii, k) = pimul((lc6bas-1+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
+  lamRPp_GT_dPpik(ii, k) = -pimul((lc6bas-1+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
   lamRPm_GT_dPmik(ii, k) = pimul((lc9bas-1+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
-  temp = -pimul((lc10bas-1+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
-  lamPikplus(ii( temp > 0), k) =  temp(temp > 0);
-  lamPikminus(ii(temp < 0), k) = -temp(temp < 0);
-  lamPikp_GT_0(ii, k) = pimul((lc5bas-1+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
-  lamPikm_GT_0(ii, k) = pimul((lc8bas-1+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
-  if k > 1
-    lamPhysRamp(ii, k-1) = -pimul((lc3bas-1-ng(1)+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
-  end
   if HAVE_Q
-    dQplus(ii, k) = baseMVA * xr(dQpbas(k):dQpend(k));
-    dQminus(ii, k) = baseMVA * xr(dQmbas(k):dQmend(k));
-    lamRQp_GT_dQpik(ii, k) = pimul((lc16bas-1+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
+    lamRQp_GT_dQpik(ii, k) = -pimul((lc16bas-1+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
     lamRQm_GT_dQmik(ii, k) = pimul((lc19bas-1+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
-    temp = -pimul((lc20bas-1+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
-    lamQikplus( ii(temp > 0), k) =  temp(temp > 0);
-    lamQikminus(ii(temp < 0), k) = -temp(temp < 0);
-    lamQikp_GT_0(ii, k) = pimul((lc15bas-1+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
-    lamQikm_GT_0(ii, k) = pimul((lc18bas-1+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
-    if k > 1
-      lamPhysRampQ(ii, k-1) = -pimul((lc13bas-1-ng(1)+sum(ng(1:k-1))) + (1:ng(k))) / baseMVA;
-    end
   end
 end
 
@@ -1483,105 +1315,11 @@ for i=1:ng(1)
   Qmax(i) = max(Qik(i, ii));
 end
 
-% Now analyze consistency of deltas, Pc, Gmin, Gmax. Problems when
-% Gmin(i) + max_k {Pikminus} + epsilon < Gmax(i) - max_k {Pikplus},
-% i.e. there is a gap of epsilon between the LHS and RHS; under normal
-% conditions both expressions should evaluate to Pci.
-% Otherwise, if the above is tight, then Pci is equal to either
-% side (with epsilon = 0).
-max_dPplus = max(dPplus, [], 2);    % not sure if all are tight, but expect
-max_dPminus = max(dPminus, [], 2);  % largest to be tight and equal to reserve
-tight_rhs = min(Gmin + max_dPminus, ActiveContractMax);
-tight_lhs = max(Gmax - max_dPplus, ActiveContractMin);
-test_loose = tight_rhs-tight_lhs;
-% Pc_raw = Pc;  % DEBUG CODE
-for i=1:ng(1)
-  if test_loose(i) > 4*baseMVA*mpopt.opf.violation
-    if mpopt.verbose > 1
-      fprintf('Warning: loose constraints, Pc(%d) set to ', i);
-      fprintf('lower end of %.3g MW valid range\n', test_loose(i));
-    end
-    Pc(i) = tight_lhs(i);
-  elseif test_loose(i) < -4*baseMVA*mpopt.opf.violation
-    fprintf('ERROR: Constraint violation of %g MW related to inc/dec/res/Pc(%d)\n', -test_loose(i), i);
-    success == 0;
-%   else
-%     Pc(i) = (tight_lhs(i) + tight_rhs(i))/2;
-  end
-  if Pc(i) > Gmax(i) && Gmax(i) > ActiveContractMax(i)
-    if mpopt.verbose > 1
-      fprintf('Warning: Pc(%i) > Gmax(%i) (internal order), setting to Gmax.\n', i, i);
-    end
-    Pc(i) = Gmax(i);
-  elseif Pc(i) < Gmin(i) && Gmin(i) < ActiveContractMin(i)
-    if mpopt.verbose > 1
-      fprintf('Warning: Pc(%i) < Gmin(%i) (internal order), setting to Gmin.\n', i, i);
-    end
-    Pc(i) = Gmin(i);
-  end
-end
-if HAVE_Q
-  max_dQplus = max(dQplus, [], 2);    % not sure if all are tight, but expect
-  max_dQminus = max(dQminus, [], 2);  % largest to be tight and equal to reserve
-  tight_rhsq = min(Qmin + max_dQminus, ReactiveContractMax);
-  tight_lhsq = max(Qmax - max_dQplus, ReactiveContractMin);
-  test_looseq = tight_rhsq-tight_lhsq;
-  for i=1:ng(1)
-    if test_looseq(i) > 4*baseMVA*mpopt.opf.violation
-      if mpopt.verbose > 1
-        fprintf('Warning: loose constraints, Qc(%d) set to ', i);
-        fprintf('lower end of %.3g MVAr valid range\n', test_looseq(i));
-      end
-      Qc(i) = tight_lhsq(i);
-    elseif test_looseq(i) < -4*baseMVA*mpopt.opf.violation
-      fprintf('ERROR: Constraint violation of %g MVAr related to inc/dec/res/Qc(%d)\n', -test_looseq(i), i);
-      success == 0;
-%     else
-%       Qc(i) = (tight_lhsq(i) + tight_rhsq(i))/2;
-    end
-    if Qc(i) > Qmax(i) && Qmax(i) > ReactiveContractMax(i)
-      if mpopt.verbose > 1
-        fprintf('Warning: Qc(%i) > Qmax(%i) (in internal order), setting to Qmax.\n', i, i);
-      end
-      Qc(i) = Qmax(i);
-    elseif Qc(i) < Qmin(i) && Qmin(i) > ReactiveContractMin(i)
-      if mpopt.verbose > 1
-        fprintf('Warning: Qc(%i) < Qmin(%i) (in internal order), setting to Qmin.\n', i, i);
-      end
-      Qc(i) = Qmin(i);
-    end
-  end
-end
-% Now Pc should be ok and can recompute dPplus, dPminus etc to make all tight
-for k = 1:nc+1
-  ii = find(aug_gen_stat(:, k) > 0);
-  dPplus(ii, k) = max(zeros(size(ii)), Pik(ii,k)-Pc(ii));
-  dPminus(ii, k) = max(zeros(size(ii)), Pc(ii)-Pik(ii,k));
-  if HAVE_Q
-    dQplus(ii, k) = max(zeros(size(ii)), Qik(ii,k)-Qc(ii));
-    dQminus(ii, k) = max(zeros(size(ii)), Qc(ii)-Qik(ii,k));
-  end
-end
-% and can also recompute the reserve
-% (but not with non-unity availability factors)
-% PReservePlus = max(zeros(size(Pc)), Gmax - Pc);
-% PReserveMinus = max(zeros(size(Pc)), Pc - Gmin);
-% if HAVE_Q
-%   QReservePlus = max(zeros(size(Pc)), Qmax - Qc);
-%   QReserveMinus = max(zeros(size(Pc)), Qc - Qmin);
-% else
-%   QReservePlus = [];
-%   QReserveMinus = [];
-% end
-
 % Sum some multipliers over flows
 sumlamP = sum(lamPik, 2);
 sumlamQ = sum(lamQik, 2);
-sumlamPikplus = sum(lamPikplus, 2);
-sumlamPikminus = sum(lamPikminus, 2);
 sumlamRPp = sum(lamRPp_GT_dPpik, 2);
 sumlamRPm = sum(lamRPm_GT_dPmik, 2);
-sumlamPhysRamp = sum(lamPhysRamp, 2);
 if HAVE_Q
   sumlamRQp = sum(lamRQp_GT_dQpik, 2);
   sumlamRQm = sum(lamRQm_GT_dQmik, 2);
@@ -1735,29 +1473,13 @@ end
 % The following output data is all in ng_original x (nc+1) vectors; nc
 % is actual number of contingencies considered in this run
 tmp = zeros(ng_original, nc+1);
-results.energy.delta.qty.P_pos = tmp; % incremental deltas for active power
-results.energy.delta.qty.P_neg = tmp; % decremental deltas for active power
-results.energy.delta.mu.P_pos_GEQ0 = tmp; % mu on inc deltas >= 0
-results.energy.delta.mu.P_neg_GEQ0 = tmp;
 results.reserve.mu.Rp_pos = tmp; % upward reserve for active power
 results.reserve.mu.Rp_neg = tmp; % downward reserve for active power
-results.energy.delta.qty.P_pos(base_on_gen, :) = dPplus(inv_gen_ord, :);
-results.energy.delta.qty.P_neg(base_on_gen, :) = dPminus(inv_gen_ord, :);
-results.energy.delta.mu.P_pos_GEQ0(base_on_gen, :) = lamPikp_GT_0(inv_gen_ord, :);
-results.energy.delta.mu.P_neg_GEQ0(base_on_gen, :) = lamPikm_GT_0(inv_gen_ord, :);
 results.reserve.mu.Rp_pos(base_on_gen, :) = lamRPp_GT_dPpik(inv_gen_ord, :);
 results.reserve.mu.Rp_neg(base_on_gen, :) = lamRPm_GT_dPmik(inv_gen_ord, :);
 if HAVE_Q
-  results.energy.delta.qty.Q_pos = tmp;
-  results.energy.delta.qty.Q_neg = tmp;
-  results.energy.delta.mu.Q_pos_GEQ0 = tmp; % mu on inc deltas >= 0
-  results.energy.delta.mu.Q_neg_GEQ0 = tmp;
   results.reserve.mu.Rq_pos = tmp;
   results.reserve.mu.Rq_neg = tmp;
-  results.energy.delta.qty.Q_pos(base_on_gen, :) = dQplus(inv_gen_ord, :);
-  results.energy.delta.qty.Q_neg(base_on_gen, :) = dQminus(inv_gen_ord, :);
-  results.energy.delta.mu.Q_pos_GEQ0(base_on_gen, :) = lamQikp_GT_0(inv_gen_ord, :);
-  results.energy.delta.mu.Q_neg_GEQ0(base_on_gen, :) = lamQikm_GT_0(inv_gen_ord, :);
   results.reserve.mu.Rq_pos(base_on_gen, :) = lamRQp_GT_dQpik(inv_gen_ord, :);
   results.reserve.mu.Rq_neg(base_on_gen, :) = lamRQm_GT_dQmik(inv_gen_ord, :);
 end
@@ -1777,15 +1499,6 @@ results.energy.Gmax(base_on_gen) = Gmax(inv_gen_ord);
 results.energy.Gmin(base_on_gen) = Gmin(inv_gen_ord);
 results.energy.Qmax(base_on_gen) = Qmax(inv_gen_ord);
 results.energy.Qmin(base_on_gen) = Qmin(inv_gen_ord);
-
-% The following is in ng_original * nc matrices
-tmp = zeros(ng_original, nc);
-results.energy.mu.Ramp_P_max = tmp;
-results.energy.mu.Ramp_P_max(base_on_gen, :) = lamPhysRamp(inv_gen_ord,:);
-if HAVE_Q
-  results.energy.mu.Ramp_Q_max = tmp;
-  results.energy.mu.Ramp_Q_max(base_on_gen, :) = lamPhysRampQ(inv_gen_ord,:);
-end
 
 % The following output data is in (ng_original x 1) vectors.
 tmp = zeros(ng_original, 1);
@@ -1876,13 +1589,6 @@ sumlamP_out = tmp;
 sumlamP_out(base_on_gen) = sumlamP(inv_gen_ord);
 sum_genbus_lam_p_out = tmp;
 sum_genbus_lam_p_out(base_on_gen) = sum_bus_lam_p(gen(inv_gen_ord, GEN_BUS));
-sumlamPikplus_out = tmp;
-sumlamPikplus_out(base_on_gen) = sumlamPikplus(inv_gen_ord);
-sumlamPikminus_out = tmp;
-sumlamPikminus_out(base_on_gen) = sumlamPikminus(inv_gen_ord);
-
-results.energy.sumlamPikplus  = sumlamPikplus_out;
-results.energy.sumlamPikminus = sumlamPikminus_out;
 
 if success && OUT_ALL
   ngencol = 6; % number of generators per print table (max # columns)
@@ -1956,43 +1662,20 @@ if success && OUT_ALL
     fprintf('muRp-box |');
     fprintf(' %7.2f ', results.reserve.mu.Rpmax_neg(igp));
     fprintf('\n');
-    fprintf('SumMuPik+|');
-    fprintf(' %7.2f ', sumlamPikplus_out(igp));
-    fprintf('\n');
-    fprintf('SumMuPik-|');
-    fprintf(' %7.2f ', sumlamPikminus_out(igp));
-    fprintf('\n');
-    for k = 1:nc
-      if any(abs(results.energy.mu.Ramp_P_max(igp, k)) > 1e-3)
-%        fprintf('muR(i,%2i)|', k);   % this prints k
-        fprintf('muR(i,%2i)|', clist(k)); % but this prints the contingency label
-        fprintf(' %7.2f ', results.energy.mu.Ramp_P_max(igp, k));
-        fprintf('\n');
-      end
-    end
   end
 end
 
 
-%dPplus
-%dPminus
 %sumlamP
-%lamPikplus
-%sumlamPikplus
-%lamPikminus
-%sumlamPikminus
 %lam_alpha
 %lamP0_div_prob0
 %sumlamQ
-%lamRPp_GT_dPpik
-%lamRPm_GT_dPmik
 %sumlamRPp
 %sumlamRPp_div_prob0 = sumlamRPp / prob0
 %sumlamRPm
 %sumlamRPm_div_prob0 = sumlamRPm / prob0
 %lamRPplusmax
 %lamRPminusmax
-%lamPhysRamp
 %sum_bus_lam_p
 %sum_bus_lam_q
 

@@ -13,13 +13,14 @@ function mpc = addCapCons(mpc, caseInfo, group, verbose)
 	if nargin < 4
 		verbose = 1; % show a little debug information
 	end
-
+    
+    define_constants;
     capConstraints = caseInfo.capConstraints;
     [m, n] = size(capConstraints);
     numCons = m * n;
     numGens = size(mpc.gen, 1);
-    map = zeros(numCons, numGens);
-    cap = zeros(numCons, 1);
+    %map = zeros(numCons, numGens);
+    %cap = zeros(numCons, 1);
 
     % Select full info
     if isfield(caseInfo, 'fullLocInfo')
@@ -41,9 +42,16 @@ function mpc = addCapCons(mpc, caseInfo, group, verbose)
     idx = 1;
     for i = 1 : m
         for j = 1 : n
-            map(idx, :) = strcmp(genBus{:, 'State'}, capConstraints.Properties.RowNames{i}) ...
+            mapIdx = strcmp(genBus{:, 'State'}, capConstraints.Properties.RowNames{i}) ...
                 & strcmp(mpc.genfuel, capConstraints.Properties.VariableNames{j}) & idxGroup;
-            cap(idx, 1) = capConstraints{i, j};
+            % Check if there is any gen in this group
+            if ~any(mapIdx)
+                continue;
+            end
+            map(idx, :) = mapIdx;
+            % Choose the min value for the targeted value and buildable cap
+            capValue = min(capConstraints{i, j}, sum(mpc.gen(mapIdx, PMAX)));
+            cap(idx, 1) = capValue;
             idx = idx + 1;
         end
     end
@@ -51,7 +59,7 @@ function mpc = addCapCons(mpc, caseInfo, group, verbose)
     % Update in mpc to make equality constraints
     mpc.caplim.map = map;
     mpc.caplim.max = cap;
-    %mpc.caplim.min = cap;
+    mpc.caplim.min = cap;
 
     % Debug information
     if verbose == 1

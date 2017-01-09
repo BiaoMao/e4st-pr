@@ -26,7 +26,7 @@ function [mpc, offer] = buildPV(mpc, offer, caseInfo, newLoc, verbose)
     if strcmp(newLoc, 'all')
         iBus2build = ~strcmp(mpc.genfuel, 'dl'); % get all generators bus
     else
-        iBus2build = strcmp(mpc.genfuel, 'solar') & (offer(:, 2) >= 50); % get solar bus with 50MW+
+        iBus2build = strcmp(mpc.genfuel, 'solar') & (offer(:, 2) >= 0);
     end
     busId = unique(mpc.gen(iBus2build, 1)); % get unique bus id
     numBus = length(busId);

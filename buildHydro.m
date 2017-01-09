@@ -27,7 +27,7 @@ function [mpc, offer] = buildHydro(mpc, offer, caseInfo, newLoc, verbose)
     if strcmp(newLoc, 'all')
         iBus2build = ~strcmp(mpc.genfuel, 'dl'); % get all generators bus
     elseif strcmp(newLoc, 'exist')
-        iBus2build = strcmp(mpc.genfuel, newType) & (offer(:, 2) >= 200); % get ng bus with 200MW+
+        iBus2build = strcmp(mpc.genfuel, newType) & (offer(:, 2) >= 0);
     end
     busId = unique(mpc.gen(iBus2build, 1)); % get unique bus id
     numBus = length(busId);

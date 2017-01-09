@@ -9,7 +9,7 @@ function rv = e4st_ver(varargin)
 %   See also MPVER.
 
 %   E4ST
-%   Copyright (c) 2010-2016 by Power System Engineering Research Center (PSERC)
+%   Copyright (c) 2010-2017 by Power System Engineering Research Center (PSERC)
 %   by Ray Zimmerman, PSERC Cornell
 %
 %   This file is part of E4ST.
@@ -19,7 +19,7 @@ function rv = e4st_ver(varargin)
 v = struct( 'Name',     'E4ST', ... 
             'Version',  '1.0b3', ...
             'Release',  '', ...
-            'Date',     '26-Dec-2016' );
+            'Date',     '09-Jan-2017' );
 if nargout > 0
     if nargin > 0
         rv = v;

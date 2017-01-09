@@ -106,7 +106,7 @@ function [results, f, success, info, et, g, jac, xr, pimul] = e4st_solve(varargi
 %   for details and default values.
 
 %   E4ST
-%   Copyright (c) 2000-2016 by Power System Engineering Research Center (PSERC)
+%   Copyright (c) 2000-2017 by Power System Engineering Research Center (PSERC)
 %   by Carlos E. Murillo-Sanchez, PSERC Cornell & Universidad Nacional de Colombia
 %   and Ray Zimmerman, PSERC Cornell
 %
@@ -1823,10 +1823,20 @@ if HAVE_Q
   results.reserve.mu.Rqmax_pos(base_on_gen) = lamRQplusmax(inv_gen_ord);
   results.reserve.mu.Rqmax_neg(base_on_gen) = lamRQminusmax(inv_gen_ord);
 end
-
+if ~isempty(caplim_map)
+    results.caplim.map = caplim_map;
+    results.caplim.min = caplim_min;
+    results.caplim.max = caplim_max;
+    results.caplim.qty = A4C * xr * baseMVA;
+    results.caplim.mu  = -pimul(lc4Cbas:lc4Cend) / baseMVA;
+end
 if ~isempty(toc_map)
+    results.total_output.map = toc_map;
+    results.total_output.cap = toc_cap;
+    results.total_output.coeff = toc_coeff;
+    results.total_output.type = toc_type;
     results.total_output.qty = A21 * xr * baseMVA;
-    results.total_output.mu = abs(pimul(lc21bas:lc21end)) * baseMVA;
+    results.total_output.mu = -pimul(lc21bas:lc21end) / baseMVA;
 end
 
 % raw OPF results

@@ -5,7 +5,7 @@ function t_e4st_caplim(quiet)
 %   output constraints.
 
 %   E4ST
-%   Copyright (c) 2009-2016 by Power System Engineering Research Center (PSERC)
+%   Copyright (c) 2009-2017 by Power System Engineering Research Center (PSERC)
 %   by Ray Zimmerman, PSERC Cornell
 %
 %   This file is part of E4ST.
@@ -16,7 +16,7 @@ if nargin < 1
     quiet = 0;
 end
 
-n_tests = 217;
+n_tests = 221;
 
 t_begin(n_tests, quiet);
 
@@ -265,21 +265,21 @@ if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
         mpc.caplim.map = caplim_map;
         switch k
             case 1  %% no cap lims
-                sum_ebuilt = [7.4 50];
+                sum_ebuilt = [7.4; 50];
             case 2  %% upper limit
                 mpc.caplim.max = caplim_max;
-                sum_ebuilt = [15.91 40];
+                sum_ebuilt = [15.91; 40];
             case 3  %% lower limit
                 mpc.caplim.min = caplim_min;
-                sum_ebuilt = [16 50];
+                sum_ebuilt = [16; 50];
             case 4  %% both limits
                 mpc.caplim.max = caplim_max;
                 mpc.caplim.min = caplim_min;
-                sum_ebuilt = [16 40];
+                sum_ebuilt = [16; 40];
             case 5  %% both limits
                 mpc.caplim.max = caplim_max;
                 mpc.caplim.min = caplim_min;
-                sum_ebuilt = [16 40];
+                sum_ebuilt = [16; 40];
                 mpc.total_output = tot_out;
                 mpc.total_output.cap = [30; 80; 8.35];
         end
@@ -289,6 +289,8 @@ if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
                     e4st_solve(mpc, roffer, contab, mpopt);
 
 %     fname = sprintf('t_e4st_caplim_soln%d', k);
+%     results.opf_results = rmfield(results.opf_results, 'userfcn');
+%     results.opf_results = rmfield(results.opf_results, 'om');
 %     save(fname, 'f', 'results');
 
 %     results.total_output.qty
@@ -333,7 +335,13 @@ if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
 %    sum(built)
 %    sum(sum(built))
     t_is(built, ebuilt, 12, t);
-    t_is(sum(built), sum_ebuilt, 5, t);
+    t_is(sum(built)', sum_ebuilt, 5, t);
+    if k > 1
+        t = 'caplim.qty';
+        t_is(results.caplim.qty, sum_ebuilt, 5, t);
+%         t = 'caplim.mu';
+%         t_is(results.caplim.mu, s.results.caplim.mu, 1, t);
+    end
 
     t = 'results.energy.Pc';
     t_is(results.energy.Pc, s.results.energy.Pc, 5, t);

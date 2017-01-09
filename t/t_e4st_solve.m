@@ -4,7 +4,7 @@ function t_e4st_solve(quiet)
 %   Includes DC lines and interface limits.
 
 %   E4ST
-%   Copyright (c) 2009-2016 by Power System Engineering Research Center (PSERC)
+%   Copyright (c) 2009-2017 by Power System Engineering Research Center (PSERC)
 %   by Ray Zimmerman, PSERC Cornell
 %
 %   This file is part of E4ST.
@@ -244,6 +244,11 @@ if have_fcn('glpk') || have_fcn('gurobi') || have_fcn('cplex') || ...
         [results1, f1, success1, info, et, g, jac, xr, pimul] = ...
                     e4st_solve(mpc, roffer, contab, mpopt);
 
+
+%     fname = sprintf('t_e4st_solve_soln%d', k);
+%     results1.opf_results = rmfield(results1.opf_results, 'userfcn');
+%     results1.opf_results = rmfield(results1.opf_results, 'om');
+%     save(fname, 'f1', 'results1');
 
 %     results1.total_output.qty
 %     results1.total_output.mu

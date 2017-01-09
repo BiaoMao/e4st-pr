@@ -1,4 +1,4 @@
-function [mpc, offer] = buildNG(mpc, offer, caseInfo, newType, newLoc, verbose)
+function [mpc, offer] = buildNG(mpc, offer, caseInfo, newType, newLoc, yearInfo, year, verbose)
 %% buildNG: add buildable ngcc and ngt
 %   newLoc = 'all', build new gen at all buses
 %   newLoc = 'exist', build new gen at existing buses
@@ -12,9 +12,10 @@ function [mpc, offer] = buildNG(mpc, offer, caseInfo, newType, newLoc, verbose)
 %   See http://e4st.com/ for more info.
     
     % Set default argin
-    if nargin < 6
+    if nargin < 8
         verbose = 1; % show a little debug information
     end
+    idxYear = find(strcmp(yearInfo.Properties.VariableNames, ['Y', num2str(year)]));
 
     % Initial data
     genAf = caseInfo.genAf;
@@ -49,7 +50,7 @@ function [mpc, offer] = buildNG(mpc, offer, caseInfo, newType, newLoc, verbose)
 
     % Add new gencost table
     newGencost(:, 1:4) = repmat([2 0 0 2], numBus, 1);
-    newGencost(:, 5) = genInfo{iGeninfo, 'Gencost'}; % gencost
+    newGencost(:, 5) = genInfo{iGeninfo, 'HRUsed'} * yearInfo{'ngPrice', idxYear} + genInfo{iGeninfo, 'VOMUsed'}; % gencost
 
     % Add new gen fuel table
     newGenfuel(:, 1) = {newType};

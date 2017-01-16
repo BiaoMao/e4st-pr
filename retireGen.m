@@ -18,6 +18,9 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
             
     % Filter out the small generators
     idxSmall = usedCap < caseInfo.retireTheta;   
+    % Extract the bus info
+    genBus = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
+    genBus = join(genBus, caseInfo.locationInfo);
 
     % Filter out the fuel types that does not retire  
 %     idxNoretire = zeros(size(mpc.gen, 1), 1);          
@@ -30,8 +33,8 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
     % Choose which group to apply retirement
     if strcmp(group, 'new')
         idxRetire = (mpc.newgen == 1);
-    elseif strcmp(group, 'all')
-
+    elseif strcmp(group, 'ca-or-new')
+        idxRetire = (mpc.newgen == 1) | strcmp(genBus{:, 'Nation'}, 'CA');
     end
 
     % Set PositiveReserveCap to used capacity    

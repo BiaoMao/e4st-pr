@@ -28,6 +28,9 @@ function mpc = addCapCons(mpc, caseInfo, group, verbose)
     else 
         locInfo = caseInfo.locationInfo;
     end
+    % Extract the bus info
+    genBus = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
+    genBus = join(genBus, locInfo);
 
     % Select the group to apply these caps
     if strcmp(group, 'new')
@@ -36,18 +39,16 @@ function mpc = addCapCons(mpc, caseInfo, group, verbose)
         idxGroup = ones(numGens, 1);
     end    
 
-    % Extract the bus info
-    genBus = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
-    genBus = join(genBus, locInfo);
+    % Set capacity constraints
     idx = 1;
     for i = 1 : m
         for j = 1 : n
             mapIdx = strcmp(genBus{:, 'State'}, capConstraints.Properties.RowNames{i}) ...
                 & strcmp(mpc.genfuel, capConstraints.Properties.VariableNames{j}) & idxGroup;
-            % Check if there is constraint in this group
-            % if capConstraints{i, j} == 0
-            %	continue;
-            % end
+            % Check if there is constraint in this group; -1 means no constraints
+            if capConstraints{i, j} == -1
+            	continue;
+            end
             % Check if there is any gen in this group
             if ~any(mapIdx)
                 if capConstraints{i, j} ~= 0

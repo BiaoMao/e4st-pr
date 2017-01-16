@@ -16,8 +16,16 @@ function [mpc, offer] = removeGen(mpc, offer, idx)
     mpc.newgen(idx, :) = [];
     mpc.availability_factor(idx, :) = [];
     offer(idx, :) = [];
-    mpc.total_output.map(:, idx) = [];
-    mpc.total_output.coeff(idx, :) = [];
-    mpc.ng = size(mpc.gen, 1);  
-    
+    mpc.ng = size(mpc.gen, 1); 
+
+    % Update total_output constraints
+    if isfield(mpc, 'total_output')
+        mpc.total_output.map(:, idx) = [];
+        mpc.total_output.coeff(idx, :) = [];
+    end
+
+    % Update capacity constraints
+    if isfield(mpc, 'caplim')
+        mpc.caplim.map(:, idx) = [];
+    end
 end

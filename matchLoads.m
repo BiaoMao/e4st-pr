@@ -27,6 +27,8 @@ function mpc = matchLoads(mpc, caseInfo, verbose)
     % states = unique(genBus{:, 'State'});
     % statesTable = [table(states, 'VariableNames', {'State'})...
     %     array2table([1 : length(states)]', 'VariableNames', {'load_zone'})];   
+    % Sort the State ID first
+    caseInfo.loadValue = sortrows(caseInfo.loadValue,'StateID','ascend');
     busTable = join(busTable, caseInfo.loadValue(:, {'State', 'StateID'}));
 
     % Scale State loads to real values

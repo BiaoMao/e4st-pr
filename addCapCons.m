@@ -44,12 +44,24 @@ function mpc = addCapCons(mpc, caseInfo, group, verbose)
         for j = 1 : n
             mapIdx = strcmp(genBus{:, 'State'}, capConstraints.Properties.RowNames{i}) ...
                 & strcmp(mpc.genfuel, capConstraints.Properties.VariableNames{j}) & idxGroup;
+            % Check if there is constraint in this group
+            % if capConstraints{i, j} == 0
+            %	continue;
+            % end
             % Check if there is any gen in this group
             if ~any(mapIdx)
+                if capConstraints{i, j} ~= 0
+                    fprintf('No buildable %s exists in %s\n', capConstraints.Properties.VariableNames{j},...
+                        capConstraints.Properties.RowNames{i});
+                end
                 continue;
             end
             map(idx, :) = mapIdx;
             % Choose the min value for the targeted value and buildable cap
+            if sum(mpc.gen(mapIdx, PMAX)) < capConstraints{i, j}
+                fprintf('Not enough buildable %s exists in %s\n', capConstraints.Properties.VariableNames{j},...
+                     capConstraints.Properties.RowNames{i});
+            end
             capValue = min(capConstraints{i, j}, sum(mpc.gen(mapIdx, PMAX)));
             cap(idx, 1) = capValue;
             idx = idx + 1;

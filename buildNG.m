@@ -27,7 +27,7 @@ function [mpc, offer] = buildNG(mpc, offer, caseInfo, newType, newLoc, yearInfo,
     if strcmp(newLoc, 'all')
         iBus2build = ~strcmp(mpc.genfuel, 'dl'); % get all generators bus
     else
-        iBus2build = strcmp(mpc.genfuel, 'ng') & (offer(:, 2) >= 200); % get ng bus with 200MW+
+        iBus2build = strcmp(mpc.genfuel, 'ng') & (offer(:, 2) >= 100); 
     end
     busId = unique(mpc.gen(iBus2build, 1)); % get unique bus id
     numBus = length(busId);

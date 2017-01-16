@@ -58,16 +58,7 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
 
     % Delete gen that used caps are zeros    
     idx = idxSmall & idxRetire;
-    mpc.gen(idx, :) = [];
-    mpc.gencost(idx, :) = [];
-    mpc.genfuel(idx, :) = [];
-    mpc.gen_aux_data(idx, :) = [];
-    mpc.newgen(idx, :) = [];
-    mpc.availability_factor(idx, :) = [];
-    offer(idx, :) = [];
-    mpc.total_output.map(:, idx) = [];
-    mpc.total_output.coeff(idx, :) = [];
-    mpc.ng = size(mpc.gen, 1);    
+    [mpc, offer] = removeGen(mpc, offer, idx);
 
     % Debug information
     if verbose == 1

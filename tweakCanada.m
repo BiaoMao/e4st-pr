@@ -18,10 +18,11 @@ function [mpc, offer] = tweakCanada(mpc, offer, caseInfo, verbose)
 		verbose = 1; % show a little debug information
 	end
 
-    %% Remove buildable gen in Cananda
+    %% Remove buildable gen in Cananda except Alberta
     genTable = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
     genTable = join(genTable, caseInfo.locationInfo);
-    idxCA = strcmp(genTable{:, 'Nation'}, 'CA') & ~strcmp(genTable{:, 'State'}, 'alberta');
+    idxCA = strcmp(genTable{:, 'Nation'}, 'CA') & ~strcmp(genTable{:, 'State'}, 'alberta') & ...
+            ~strcmp(mpc.genfuel, 'dl') & mpc.newgen == 1;
     [mpc, offer] = removeGen(mpc, offer, idxCA);
     if verbose == 1
         fprintf('Remove %d buildable gen from Cananda except Alberta\n', length(find(idxCA)));

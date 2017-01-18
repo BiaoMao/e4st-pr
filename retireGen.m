@@ -31,10 +31,12 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
 %     end   
 
     % Choose which group to apply retirement
+    % Only apply to generators
     if strcmp(group, 'new')
         idxRetire = (mpc.newgen == 1);
     elseif strcmp(group, 'ca-or-new')
-        idxRetire = (mpc.newgen == 1) | strcmp(genBus{:, 'Nation'}, 'CA');
+        idxRetire = (mpc.newgen == 1) |...
+            (strcmp(genBus{:, 'Nation'}, 'CA') & ~strcmp(mpc.genfuel, 'dl'));
     end
 
     % Set PositiveReserveCap to used capacity    

@@ -101,7 +101,7 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     if any(idxNegLoad)
         % Recover to original cost from col 1 to 5
         % We need to use different index
-        gencost(idxNegLoad, 1:5) = repmat([2 0 0 2 5000], length(find(idxNegLoad)), 1); 
+        gencost(idxNegLoad, 1:5) = repmat([2 0 0 2], ); 
         gencost(idxNegLoad, 6 : end) = 0;
     end
     % Test if the gencost is good

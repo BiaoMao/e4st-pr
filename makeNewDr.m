@@ -1,4 +1,4 @@
-function [mpc, contab] = makeNewDr(mpc, caseInfo, yearInfo, busRes, year, mode, verbose)
+function [mpc, contab] = makeNewDr(mpc, contab, caseInfo, yearInfo, busRes, year, mode, verbose)
 %% makeNewDr: make the step gencost of the demand response for base hour and contingency hours
 %
 %   E4ST
@@ -10,7 +10,7 @@ function [mpc, contab] = makeNewDr(mpc, caseInfo, yearInfo, busRes, year, mode, 
 %   See http://e4st.com/ for more info.
     
     % Set default argin
-    if nargin < 7
+    if nargin < 8
         verbose = 1; % show a little debug information
     end
 
@@ -25,7 +25,8 @@ function [mpc, contab] = makeNewDr(mpc, caseInfo, yearInfo, busRes, year, mode, 
     mpc.gencost(idxDl, :) = makeDrStep(mpc, caseInfo, yearInfo, busRes, 1, year, mode, verbose);
 
     % Make step gencost of contab for contingency hours
-    contab = makeContDr(mpc, caseInfo, yearInfo, busRes, year, mode, verbose);
+    contabDr = makeContDr(mpc, caseInfo, yearInfo, busRes, year, mode, verbose);
+    contab = [contab; contabDr];
 
     % Debug information
     if verbose == 1

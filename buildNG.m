@@ -26,8 +26,10 @@ function [mpc, offer] = buildNG(mpc, offer, caseInfo, newType, newLoc, yearInfo,
     newCap = genInfo{iGeninfo, 'InstallCap'}; % Installed Cap
     if strcmp(newLoc, 'all')
         iBus2build = ~strcmp(mpc.genfuel, 'dl'); % get all generators bus
-    else
+    elseif strcmp(newLoc, 'exist')
         iBus2build = strcmp(mpc.genfuel, 'ng') & (offer(:, 2) >= 100); 
+    elseif strcmp(newLoc, 'State')
+        
     end
     busId = unique(mpc.gen(iBus2build, 1)); % get unique bus id
     numBus = length(busId);

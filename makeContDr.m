@@ -29,10 +29,10 @@ function contab = makeContDr(mpc, caseInfo, yearInfo, busRes, year, mode, verbos
         iCont = i - 1;
 
         % Create contab for one hour
-        col2Change = 5 : 22; % colunms need to be changed
+        col2Change = 1 : 22; % colunms need to be changed
         nCol = length(col2Change);% total columns
         nSigCont = nDl * nCol;% total rows of contabs for one hour
-        gencostVec = reshape(gencost(:,5:22),[],1); % value need to be changed
+        gencostVec = reshape(gencost(:, col2Change),[],1); % value need to be changed
         headVec1 = repmat([iCont caseInfo.probability(i) 9],nSigCont,1);
         headVec2 = repmat(iDl,nCol,1);
         headVec3 = reshape(repmat(col2Change,nDl,1),[],1); % column id to change

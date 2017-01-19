@@ -41,13 +41,13 @@ function contab = makeContDr(mpc, caseInfo, yearInfo, busRes, year, mode, verbos
         contab(1+(iCont-1)*nSigCont:iCont*nSigCont,:) = contab1;
 
         % Add load limits using the first step load
-        iUpdate = find(gencost(: ,5) < 0);
-        nUpdate = length(iUpdate);
-        headVec1 = repmat([iCont caseInfo.probability(i) 2],nUpdate,1);
-        headVec2 = iDl(iUpdate);
-        headVec3 = repmat([10 1], nUpdate, 1); % column id to change, 10: load limits, 1: new values
-        headVec4 = gencost(iUpdate, 5); % the firs step of loads
+        % iUpdate = find(gencost(: ,5) < 0);
+        % nUpdate = length(iUpdate);
+        % headVec1 = repmat([iCont caseInfo.probability(i) 2],nUpdate,1);
+        % headVec2 = iDl(iUpdate);
+        % headVec3 = repmat([10 1], nUpdate, 1); % column id to change, 10: load limits, 1: new values
+        % headVec4 = gencost(iUpdate, 5); % the firs step of loads
 
-        contab = [contab; [headVec1 headVec2 headVec3 headVec4]];
+        % contab = [contab; [headVec1 headVec2 headVec3 headVec4]];
     end
 end

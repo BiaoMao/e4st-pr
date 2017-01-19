@@ -15,6 +15,9 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
     end
 
     usedCap = result.reserve.qty.Rp_pos;
+    % Calculate shutdown capacity
+    idxNew = (mpc.newgen == 0);
+    capShutdown = sum(offer(idxNew, 2) - usedCap(idxNew, 1));
             
     % Filter out the small generators
     idxSmall = usedCap < caseInfo.retireTheta;   
@@ -62,11 +65,12 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
     end  
 
     % Delete gen that used caps are zeros    
-    idx = idxSmall & idxRetire;
+    idx = idxSmall & idxRetire;    
     [mpc, offer] = removeGen(mpc, offer, idx);
 
     % Debug information
     if verbose == 1
         fprintf('The number of retired generators is %d\n', length(find(idx)));
+        fprintf('The capacity of shutdown generators is %f\n', capShutdown);
     end
 end

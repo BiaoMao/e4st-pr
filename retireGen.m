@@ -1,4 +1,4 @@
-function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
+function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, verbose)
 %% retireGen: retire generations which are smaller than theta
 %
 %   E4ST
@@ -16,8 +16,8 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
 
     usedCap = result.reserve.qty.Rp_pos;
     % Calculate shutdown capacity
-    idxNew = (mpc.newgen == 0);
-    capShutdown = sum(offer(idxNew, 2) - usedCap(idxNew, 1));
+    idxExist = (mpc.newgen ~= 1);
+    capShutdown = sum(offer(idxExist, 2) - usedCap(idxExist, 1));
             
     % Filter out the small generators
     idxSmall = usedCap < caseInfo.retireTheta;   
@@ -69,6 +69,7 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
     % Delete gen that used caps are zeros    
     idx = idxSmall & idxRetire;    
     [mpc, offer] = removeGen(mpc, offer, idx);
+    result = removeRes(result, idx);
 
     % Debug information
     if verbose == 1

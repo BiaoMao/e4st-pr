@@ -40,6 +40,8 @@ function [mpc, offer] = retireGen(mpc, offer, result, caseInfo, group, verbose)
     elseif strcmp(group, 'ca-or-new')
         idxRetire = (mpc.newgen == 1) |...
             (strcmp(genBus{:, 'Nation'}, 'CA') & ~strcmp(mpc.genfuel, 'dl'));
+    elseif strcmp(group, 'all')
+        idxRetire = ~strcmp(mpc.genfuel, 'dl');
     end
 
     % Set PositiveReserveCap to used capacity    

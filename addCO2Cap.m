@@ -36,11 +36,11 @@ function mpc = addCO2Cap(mpc, isInCap, cap, verbose)
         mpc.total_output.coeff(:, 2) = mpc.gen_aux_data(:,1);
     end
 
-    % select the second columns of coeffs, first row is ones
+    % select the second columns of coeffs (CO2 emission rate), first row is ones
     mpc.total_output.type = [mpc.total_output.type; 2]; 
 
     % Debug information
     if verbose == 1
-        fprintf('CO2 cap is added\n');
+        fprintf('CO2 cap of %d is added\n', cap);
     end
 end

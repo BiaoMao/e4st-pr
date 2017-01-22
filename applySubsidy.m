@@ -1,4 +1,4 @@
-function [mpc] = applySubsidy(mpc, caseInfo, verbose)
+function [mpc] = applySubsidy(mpc, yearInfo, year, verbose)
 %% applySubsidy: Apply subsidies for certain types of generators
 %
 %   E4ST
@@ -10,17 +10,23 @@ function [mpc] = applySubsidy(mpc, caseInfo, verbose)
 %   See http://e4st.com/ for more info.
 
     % Set default argin
-    if nargin < 3
+    if nargin < 4
     	verbose = 1; % show a little debug information
     end
 
-    % Apply subsidies for certain types of generators
-    nType = size(caseInfo.subTable{:, 'subType'}, 1);
-    for i = 1 : nType
-        idx = strcmp(mpc.genfuel, caseInfo.subTable{i, 'subType'});      
-        mpc.gencost(idx, 5) = mpc.gencost(idx, 5) - caseInfo.subTable{i, 'subValue'};   
+    % Format the year as a string
+	year = ['Y', num2str(year)];
+	idxYear = find(strcmp(yearInfo.Properties.VariableNames, year));  
+
+    % Apply wind subsidy
+    fuelType = 'wind';
+    if any(strcmp(yearInfo.Properties.RowNames, 'windSub'))
+        idx = strcmp(mpc.genfuel, fuelType);      
+        % The subsidy change from last year
+        delta = yearInfo{'windSub', idxYear} - yearInfo{'windSub', idxYear - 1};
+        mpc.gencost(idx, 5) = mpc.gencost(idx, 5) - delta;  
         if verbose == 1
-            fprintf('Apply $%d subsidy to gencost for %s\n', ...
-                caseInfo.subTable{i, 'subValue'}, caseInfo.subTable{i, 'subType'}{1});
-        end    
-    end     
+            fprintf('Apply $%f subsidy to gencost for %s\n', ...
+                yearInfo{'windSub', idxYear}, fuelType);
+        end 
+    end

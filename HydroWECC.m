@@ -21,15 +21,22 @@ classdef HydroWECC
             end
 
             define_constants;
+
+            % For all US hydro
+            % Extract the bus info
+            genBus = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
+            genBus = join(genBus, caseInfo.locationInfo);
+            hydroMap = find(strcmp(genBus{:, 'Nation'}, 'US') & strcmp(mpc.genfuel, 'hydro'));
+
             groups = size(caseInfo.hydroAf, 2);
-            n_hydro = size(caseInfo.hydroMap, 1);            
+            n_hydro = size(hydroMap, 1);            
             map = zeros(n_hydro, size(mpc.gen, 1));
             cap = zeros(n_hydro, 1);
             coeff = ones(size(mpc.gen, 1), 1);
             coeff_type = ones(n_hydro, 1);
             idx = 1;
-            for i = 1:groups
-                idx_members = caseInfo.hydroMap{:,i};
+            for i = 1 : groups
+                idx_members = hydroMap(:,i);
                 n_members = length(idx_members);
                 % Set hydro CF
                 cap(idx: idx+n_members-1) = mpc.gen(idx_members, PMAX) * caseInfo.hydroCf(i);

@@ -20,16 +20,30 @@ classdef HydroWECC
                 verbose = 1; % show a little debug information
             end
 
+            % Check if total_output filed is initialized
+            if ~isfield(mpc, {'total_output'})
+                mpc.total_output.map = [];
+                mpc.total_output.cap = [];
+                mpc.total_output.coeff = [];
+                mpc.total_output.type = [];
+            end
+
             define_constants;
 
             % For all US hydro
             % Extract the bus info
             genBus = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
             genBus = join(genBus, caseInfo.locationInfo);
-            hydroMap = find(strcmp(genBus{:, 'Nation'}, 'US') & strcmp(mpc.genfuel, 'hydro'));
+            hydroMap = strcmp(genBus{:, 'Nation'}, 'US') & strcmp(mpc.genfuel, 'hydro');
 
-            groups = size(caseInfo.hydroAf, 2);
-            n_hydro = size(hydroMap, 1);            
+            % British Columbia (BC)
+            hydroMap = [hydroMap strcmp(genBus{:, 'State'}, 'british columbia') & strcmp(mpc.genfuel, 'hydro')];
+
+            % Alberta (AB)
+            hydroMap = [hydroMap strcmp(genBus{:, 'State'}, 'alberta') & strcmp(mpc.genfuel, 'hydro')];
+            
+            groups = size(find(hydroMap), 2);
+            n_hydro = size(find(hydroMap), 1);            
             map = zeros(n_hydro, size(mpc.gen, 1));
             cap = zeros(n_hydro, 1);
             coeff = ones(size(mpc.gen, 1), 1);
@@ -37,7 +51,7 @@ classdef HydroWECC
             idx = 1;
             for i = 1 : groups
                 idx_members = hydroMap(:,i);
-                n_members = length(idx_members);
+                n_members = length(find(idx_members));
                 % Set hydro CF
                 cap(idx: idx+n_members-1) = mpc.gen(idx_members, PMAX) * caseInfo.hydroCf(i);
                 % Re-build map for each hyro
@@ -45,11 +59,13 @@ classdef HydroWECC
                     map(idx, idx_members(j)) = 1;
                     idx = idx + 1;
                 end
+                % Set hydro AFs
+                mpc.availability_factor(idx_members, :) = caseInfo.hydroAf(i);
             end
-            mpc.total_output.map = map;
-            mpc.total_output.cap = cap;
-            mpc.total_output.coeff = coeff;
-            mpc.total_output.type = coeff_type;            
+            mpc.total_output.map = [mpc.total_output.map; map];
+            mpc.total_output.cap = [mpc.total_output.cap; cap];
+            mpc.total_output.coeff(:, 1) = coeff; % first column is all ones
+            mpc.total_output.type = [mpc.total_output.type; coeff_type];            
 
             % Debug information
             if verbose == 1

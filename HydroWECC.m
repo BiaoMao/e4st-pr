@@ -29,11 +29,12 @@ classdef HydroWECC
             end
 
             define_constants;
-
-            % For all US hydro
+            
             % Extract the bus info
             genBus = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
             genBus = join(genBus, caseInfo.locationInfo);
+
+            % For all US hydro
             hydroMap = strcmp(genBus{:, 'Nation'}, 'US') & strcmp(mpc.genfuel, 'hydro');
 
             % British Columbia (BC)
@@ -42,8 +43,8 @@ classdef HydroWECC
             % Alberta (AB)
             hydroMap = [hydroMap strcmp(genBus{:, 'State'}, 'alberta') & strcmp(mpc.genfuel, 'hydro')];
             
-            groups = size(find(hydroMap), 2);
-            n_hydro = size(find(hydroMap), 1);            
+            groups = size(hydroMap, 2); % find all hydro groups 
+            n_hydro = length(find(hydroMap)); % find all hydro in the map            
             map = zeros(n_hydro, size(mpc.gen, 1));
             cap = zeros(n_hydro, 1);
             coeff = ones(size(mpc.gen, 1), 1);
@@ -52,15 +53,20 @@ classdef HydroWECC
             for i = 1 : groups
                 idx_members = hydroMap(:,i);
                 n_members = length(find(idx_members));
-                % Set hydro CF
-                cap(idx: idx+n_members-1) = mpc.gen(idx_members, PMAX) * caseInfo.hydroCf(i);
+                
+                % Set hydro CFs
+                cap(idx: idx+n_members-1) = mpc.gen(idx_members, PMAX) * caseInfo.hydroInfo{i, 'Cf'};
                 % Re-build map for each hyro
                 for j = 1:n_members
                     map(idx, idx_members(j)) = 1;
                     idx = idx + 1;
                 end
+
                 % Set hydro AFs
-                mpc.availability_factor(idx_members, :) = caseInfo.hydroAf(i);
+                mpc.availability_factor(idx_members, :) = caseInfo.hydroInfo{i, 'Af'};
+
+                % Set Pmin of Hydro
+                mpc.gen(idx_members, PMIN) = mpc.gen(idx_members, PMAX) * caseInfo.hydroInfo{i, 'Pmin'};
             end
             mpc.total_output.map = [mpc.total_output.map; map];
             mpc.total_output.cap = [mpc.total_output.cap; cap];
@@ -69,7 +75,7 @@ classdef HydroWECC
 
             % Debug information
             if verbose == 1
-                fprintf('Hydro AFs and CFs are set\n');
+                fprintf('Hydro AFs, Pmins and CFs are set\n');
             end
         end
 

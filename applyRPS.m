@@ -19,7 +19,7 @@ function [mpc] = applyRPS(mpc, yearInfo, year, verbose)
 	idxYear = find(strcmp(yearInfo.Properties.VariableNames, year));  
 
     % Check if total_output filed is initialized
-    if ~isfield(mpc, {'total_output'})
+    if ~isfield(mpc, 'total_output') || isempty(mpc.total_output)
         mpc.total_output.map = [];
         mpc.total_output.cap = [];
         mpc.total_output.coeff = [];

@@ -15,7 +15,7 @@ function mpc = addCO2Cap(mpc, isInCap, cap, verbose)
 	end
 
     % Check if total_output filed is initialized
-    if ~isfield(mpc, {'total_output'})
+    if ~isfield(mpc, 'total_output') || isempty(mpc.total_output)
         mpc.total_output.map = [];
         mpc.total_output.cap = [];
         mpc.total_output.coeff = [];

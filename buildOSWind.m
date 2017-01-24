@@ -44,7 +44,7 @@ function [mpc, offer] = buildOSWind(mpc, offer, caseInfo, location, oswSize, ver
 
     % Add new gencost table
     newGencost(:, 1:4) = repmat([2 0 0 2], numBus, 1);
-    newGencost(:, 5) = windInfo{idxNew, 'cost2keep'}; % gencost
+    newGencost(:, 5) = windInfo{idxNew, 'gencost'}; % gencost
 
     % Add new gen fuel table
     newGenfuel(:, 1) = {fuelType};
@@ -60,7 +60,8 @@ function [mpc, offer] = buildOSWind(mpc, offer, caseInfo, location, oswSize, ver
     newAf = windInfo{idxNew, startCol : end};
 
     % Add new offer table
-    newOffer(:, 1) = windInfo{idxNew, 'cost2build'}; % fixed cost
+    % Fixed cost, cost2k, tax and insurance are zero
+    newOffer(:, 1) = windInfo{idxNew, 'cost2build'}; 
     newOffer(:, 2) = newCap; % Installed Cap
     newOffer(:, 3) = 0;
     newOffer(:, 4) = Inf;

@@ -55,11 +55,13 @@ function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, v
         newFuels = unique(mpc.genfuel(isBuilt, :));
         for fuel = newFuels'
             bultIdx = strcmp(mpc.genfuel, fuel) & isBuilt;
-            offer(bultIdx, 1) = offer(bultIdx, 1) - caseInfo.genInfo{fuel, 'Cost2Build'};
-            % For oswind: cost2keep is 0
+            % For oswind: fixed cost is 0 after beening built
             if strcmp(fuel, 'oswind')                
                 offer(bultIdx, 1) = 0;
+                continue;
             end
+            % For other built fuel types
+            offer(bultIdx, 1) = offer(bultIdx, 1) - caseInfo.genInfo{fuel, 'Cost2Build'}; 
         end
     end
 

@@ -49,13 +49,17 @@ function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, v
     offer(idxRetire, 2) = usedCap(idxRetire, 1);
     mpc.gen(idxRetire, 9) = usedCap(idxRetire, 1); % PMAX
 
-    % Remove the cost to build,ngt-3,ngcc-9,solar-13,6-wind,, 1-cost to keep    
+    % Remove the cost to build for new generators  
     isBuilt = mpc.newgen == 1;  
     if ~isempty(mpc.genfuel(isBuilt, :))
         newFuels = unique(mpc.genfuel(isBuilt, :));
         for fuel = newFuels'
-            bultIdx = strcmp(mpc.genfuel, fuel);
-            offer(bultIdx, 1) = caseInfo.genInfo{fuel, 'Cost2Keep'};
+            bultIdx = strcmp(mpc.genfuel, fuel) & isBuilt;
+            offer(bultIdx, 1) = offer(bultIdx, 1) - caseInfo.genInfo{fuel, 'Cost2Build'};
+            % For oswind: cost2keep is 0
+            if strcmp(fuel, 'oswind')                
+                offer(bultIdx, 1) = 0;
+            end
         end
     end
 

@@ -48,7 +48,7 @@ function [mpc, offer] = buildWind(mpc, offer, caseInfo, verbose)
 
     % Add new gencost table
     newGencost(:, 1:4) = repmat([2 0 0 2], numBus, 1);
-    newGencost(:, 5) = genInfo{iGeninfo, 'Gencost'}; % gencost
+    newGencost(:, 5) = genInfo{iGeninfo, 'Gencost'}; % gencost    
 
     % Add new gen fuel table
     newGenfuel(:, 1) = {fuelType};

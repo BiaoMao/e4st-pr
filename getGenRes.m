@@ -87,6 +87,11 @@ function genRes = getGenRes(mpc, offer, result, caseInfo, yearInfo, year)
     insurance = zeros(size(result.base.gen,1), 1);
     for i = 1: length(fuelTypes)
         idxGen = find(strcmp(fuels, fuelTypes{i}));
+        if strcmp(fuelTypes{i}, 'oswind')
+            tax(idxGen) = 0;
+            insurance(idxGen) = 0;
+            continue;
+        end
         tax(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Tax'} * caseInfo.nHours;
         insurance(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Insurance'} * caseInfo.nHours;
     end

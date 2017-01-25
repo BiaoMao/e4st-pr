@@ -1,5 +1,5 @@
 function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, verbose)
-%% retireGen: retire generations which are smaller than theta
+%% retireGen: retire generations which are smaller than theta or not used
 %
 %   E4ST
 %   Copyright (c) 2012-2016 by Power System Engineering Research Center (PSERC)
@@ -13,25 +13,19 @@ function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, v
     if nargin < 6
         verbose = 1; % show a little debug information
     end
-
+    
+    % Calculate and save shutdown capacity
     usedCap = result.reserve.qty.Rp_pos;
-    % Calculate shutdown capacity
     idxExist = (mpc.newgen ~= 1);
     capShutdown = sum(offer(idxExist, 2) - usedCap(idxExist, 1));
             
     % Filter out the small generators
     idxSmall = usedCap < caseInfo.retireTheta;   
+    usedCap(idxSmall) = 0;
+
     % Extract the bus info
     genBus = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
     genBus = join(genBus, caseInfo.locationInfo);
-
-    % Filter out the fuel types that does not retire  
-%     idxNoretire = zeros(size(mpc.gen, 1), 1);          
-%     if isfield(caseInfo, 'noRetire')                
-%         for fuelType = caseInfo.noRetire
-%             idxNoretire = idxNoretire | strcmp(mpc.genfuel, fuelType);
-%         end
-%     end   
 
     % Choose which group to apply retirement
     % Only apply to generators
@@ -44,8 +38,16 @@ function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, v
         idxRetire = ~strcmp(mpc.genfuel, 'dl');
     end
 
-    % Set PositiveReserveCap to used capacity    
-    usedCap(idxSmall) = 0;
+    % Filter out the fuel types that does not retire  
+    idxNoretire = zeros(size(mpc.gen, 1), 1);          
+    if isfield(caseInfo, 'noRetire')                
+        for fuelType = caseInfo.noRetire'
+            idxNoretire = idxNoretire | strcmp(mpc.genfuel, fuelType);
+        end
+    end  
+    idxRetire(idxNoretire) = 0;
+
+    % Retirement : set PositiveReserveCap to used capacity       
     offer(idxRetire, 2) = usedCap(idxRetire, 1);
     mpc.gen(idxRetire, 9) = usedCap(idxRetire, 1); % PMAX
 
@@ -72,7 +74,8 @@ function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, v
         mpc.newgen = mpc.newgen - 1; 
     end  
 
-    % Delete gen that used caps are zeros    
+    % Delete generators that caps are zeros    
+    % idxSmall includes zero caps
     idx = idxSmall & idxRetire;    
     [mpc, offer] = removeGen(mpc, offer, idx);
     result = removeRes(result, idx);

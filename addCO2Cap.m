@@ -1,5 +1,6 @@
 function mpc = addCO2Cap(mpc, isInCap, cap, verbose)
 %% addCO2Cap: add CO2 cap to MPC
+%   cap should be annual value
 %
 %   E4ST
 %   Copyright (c) 2012-2016 by Power System Engineering Research Center (PSERC)
@@ -28,6 +29,10 @@ function mpc = addCO2Cap(mpc, isInCap, cap, verbose)
     mapTable = join(genBus, busGIS);
     cap_map = mapTable{:, 'map'};
 
+    % Conver the annual CO2 cap to hourly ammount
+    cap = cap / 8760;
+
+    % Update total_output constraints
     mpc.total_output.map = [mpc.total_output.map; cap_map'];
     mpc.total_output.cap = [mpc.total_output.cap; cap]; 
 

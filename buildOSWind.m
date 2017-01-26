@@ -60,11 +60,14 @@ function [mpc, offer] = buildOSWind(mpc, offer, caseInfo, location, oswSize, ver
     newAf = windInfo{idxNew, startCol : end};
 
     % Add new offer table
-    % Fixed cost, cost2k, tax and insurance are zero
+    % Fixed cost, cost2k, tax and insurance are zero        
     newOffer(:, 1) = windInfo{idxNew, 'cost2build'}; 
     newOffer(:, 2) = newCap; % Installed Cap
     newOffer(:, 3) = 0;
     newOffer(:, 4) = Inf;
+    % Update the genInfo table
+    caseInfo.genInfo{fuelType, 'Cost2Build'} = newOffer(1, 1);
+    caseInfo.genInfo{fuelType, 'InstallCap'} = newOffer(1, 2) ;
 
     % Update in the mpc and offer            
     mpc.gen = [mpc.gen; newGen];

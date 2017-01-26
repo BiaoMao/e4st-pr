@@ -51,8 +51,8 @@ classdef HydroWECC
             coeff_type = ones(n_hydro, 1);
             idx = 1;
             for i = 1 : groups
-                idx_members = hydroMap(:,i);
-                n_members = length(find(idx_members));
+                idx_members = find(hydroMap(:,i)); % use the actual index instead of binary 
+                n_members = length(idx_members);
                 
                 % Set hydro CFs
                 cap(idx: idx+n_members-1) = mpc.gen(idx_members, PMAX) * caseInfo.hydroInfo{i, 'Cf'};

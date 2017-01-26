@@ -1,4 +1,4 @@
-function [mpc, offer] = buildOSWind(mpc, offer, caseInfo, location, oswSize, verbose)
+function [mpc, offer, caseInfo] = buildOSWind(mpc, offer, caseInfo, location, oswSize, verbose)
 %% buildOSWind: add buildable offshore wind
 %
 %   E4ST

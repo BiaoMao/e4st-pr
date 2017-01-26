@@ -45,7 +45,7 @@ function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, v
             idxNoretire = idxNoretire | strcmp(mpc.genfuel, fuelType);
         end
     end  
-    idxRetire(idxNoretire) = 0;
+    idxRetire = idxRetire & (~idxNoretire);
 
     % Retirement : set PositiveReserveCap to used capacity       
     offer(idxRetire, 2) = usedCap(idxRetire, 1);

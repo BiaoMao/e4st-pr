@@ -90,11 +90,21 @@ classdef HydroWECC
             genBus = join(genBus, caseInfo.locationInfo);
             idxWA = strcmp(mpc.genfuel, 'hydro') & strcmp(genBus{:, 'State'}, 'washinton');
             curCap = sum(mpc.gen(idxWA, PMAX));
-            scaler = (curCap + caseInfo.deltaWA) / curCap;
+            scaler = (curCap + caseInfo.deltaHydroWA) / curCap;
             mpc.gen(idxWA, PMAX) = mpc.gen(idxWA, PMAX) * scaler;
              % Debug information
             if verbose == 1
-                fprintf('Hydro in Washinton is expanded by %f MW\n', caseInfo.deltaWA);
+                fprintf('Hydro in Washinton is expanded by %f MW\n', scaler);
+            end
+
+            % Update hydro cap in BC   
+            idxWA = strcmp(mpc.genfuel, 'hydro') & strcmp(genBus{:, 'State'}, 'british columbia');
+            curCap = sum(mpc.gen(idxWA, PMAX));
+            scaler = (caseInfo.hydroBC) / curCap;
+            mpc.gen(idxWA, PMAX) = mpc.gen(idxWA, PMAX) * scaler;
+             % Debug information
+            if verbose == 1
+                fprintf('Hydro in british columbia is expanded by %f MW\n', scaler);
             end
         end
 

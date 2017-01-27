@@ -106,6 +106,7 @@ classdef HydroWECC
              % Debug information
             if verbose == 1
                 fprintf('Hydro in british columbia is expanded by %f\n', scaler);
+                fprintf('Hydro in british columbia is expanded by %f MW\n', caseInfo.hydroBC * (1 - 1/scaler));
             end
         end
 

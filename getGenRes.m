@@ -65,16 +65,16 @@ function genRes = getGenRes(mpc, offer, result, caseInfo, yearInfo, year)
     % Calculate capacity
     usedCap = result.reserve.qty.Rp_pos;
     assignedCap = offer(:, 2);
-    invests = usedCap;
-    invests(~isNewgen) = 0;
+    investCap = usedCap;
+    investCap(~isNewgen) = 0;
 
     % Calculate retirements
     % Exclude Year 0 and some fuel types in the policyInfo
-    retires = assignedCap - usedCap;
-    retires(isNewgen) = 0;
-    if idxYear == 1
-        retires(:) = 0;
-    end
+    shutDownCap = assignedCap - usedCap;
+    shutDownCap(isNewgen) = 0;
+    % if idxYear == 1
+    %     shutDownCap(:) = 0;
+    % end
     
     % Calculate costs    
     fixedCost = offer(:, 1) .* usedCap * caseInfo.nHours;
@@ -97,7 +97,7 @@ function genRes = getGenRes(mpc, offer, result, caseInfo, yearInfo, year)
     end
 
     % Combine table
-    genRes.genTable = [genRes.genTable table(annualGen, usedCap, retires, invests, fixedCost, variableCost,...
+    genRes.genTable = [genRes.genTable table(annualGen, usedCap,    shutDownCap, investCap, fixedCost, variableCost,...
                     tax, insurance, CO2, NOx, SO2, damCO2, damNOx, damSO2, LMPBygen)];   
 
     % Set the dl values to zero

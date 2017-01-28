@@ -17,6 +17,7 @@ function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, v
     % Calculate and save shutdown capacity
     usedCap = result.reserve.qty.Rp_pos;
     idxExist = (mpc.newgen ~= 1);
+    idxNew = mpc.newgen == 1;
     capShutdown = sum(offer(idxExist, 2) - usedCap(idxExist, 1));
             
     % Filter out the small generators
@@ -30,9 +31,9 @@ function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, v
     % Choose which group to apply retirement
     % Only apply to generators
     if strcmp(group, 'new')
-        idxRetire = (mpc.newgen == 1);
+        idxRetire = idxNew;
     elseif strcmp(group, 'ca-or-new')
-        idxRetire = (mpc.newgen == 1) |...
+        idxRetire = idxNew |...
             (strcmp(genBus{:, 'Nation'}, 'CA') & ~strcmp(mpc.genfuel, 'dl'));
     elseif strcmp(group, 'all')
         idxRetire = ~strcmp(mpc.genfuel, 'dl');
@@ -44,6 +45,8 @@ function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, v
         for fuelType = caseInfo.noRetire'
             idxNoretire = idxNoretire | strcmp(mpc.genfuel, fuelType);
         end
+        % Only apply no retire to existing gens
+        idxNoretire = idxNoretire & idxExist; 
     end  
     idxRetire = idxRetire & (~idxNoretire);
 
@@ -69,7 +72,7 @@ function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, v
 
     % Label the gen built in previous decades (newgen - 1)
     if strcmp(group, 'new')
-
+        mpc.newgen = mpc.newgen - 1; 
     elseif strcmp(group, 'all')            
         mpc.newgen = mpc.newgen - 1; 
     end  

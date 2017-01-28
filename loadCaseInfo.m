@@ -20,7 +20,7 @@ function [caseInfo] = loadCaseInfo(caseInfoFile, verbose)
         structName = infoTable.Properties.VariableNames{i};
         vector = infoTable{:, i};
         if iscell(vector)
-            idx = isempty(vector);   
+            idx = cellfun(@isempty, vector);   
             caseInfo.(structName) = vector(~idx);         
         else 
             idx = isnan(vector);

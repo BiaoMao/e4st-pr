@@ -32,8 +32,8 @@ function [mpc] = applyRPS(mpc, yearInfo, year, verbose)
 
         % Get bus idx of non pre-existing 
         preExist = min(mpc.newgen);
-        mapRE = mpc.newgen ~= preExist & (strcmp(mpc.genfuel, 'solar')...
-                | strcmp(mpc.genfuel, 'wind'));
+        mapRE = (mpc.newgen ~= preExist) & (strcmp(mpc.genfuel, 'solar')...
+                | strcmp(mpc.genfuel, 'wind') | strcmp(mpc.genfuel, 'oswind'));
         mapLoad = ~(strcmp(mpc.genfuel, 'dl')); % total generations
         mapRPS = mapRE | mapLoad;
         coeffs = rps * mapLoad - mapRE; % total_output <= K

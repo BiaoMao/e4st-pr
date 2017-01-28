@@ -27,7 +27,7 @@ function [mpc] = updateFuelCost(mpc, yearInfo, year, verbose)
     mpc.gencost(idx, 5) = mpc.gencost(idx, 5) + ...
         delta * mpc.gen_aux_data(idx, 8); % 8th column is the heat rate
     if verbose == 1
-    	fprintf('The coal price has changed %.2f in %s \n', delta, year)
+    	fprintf('The coal price has changed %.2f in %s for %d gens\n', delta, year, length(find(idx)))
     end        
 
     % For oil
@@ -39,12 +39,12 @@ function [mpc] = updateFuelCost(mpc, yearInfo, year, verbose)
     mpc.gencost(idx, 5) = mpc.gencost(idx, 5) + ...
         delta * mpc.gen_aux_data(idx, 8); % 8th column is the heat rate
     if verbose == 1
-    	fprintf('The oil price has changed %.2f in %s \n', delta, year)
+		fprintf('The oil price has changed %.2f in %s for %d gens\n', delta, year, length(find(idx)))
     end  
 
 
     % For ng
-	idx = strcmp(mpc.genfuel, 'ng') & strcmp(mpc.genfuel, 'ngcc') & strcmp(mpc.genfuel, 'ngt');
+	idx = strcmp(mpc.genfuel, 'ng') | strcmp(mpc.genfuel, 'ngcc') | strcmp(mpc.genfuel, 'ngt');
 	if isfield(mpc, 'newgen')
 		idx = idx & mpc.newgen ~= 1; % for non-new generator
 	end
@@ -52,6 +52,6 @@ function [mpc] = updateFuelCost(mpc, yearInfo, year, verbose)
     mpc.gencost(idx, 5) = mpc.gencost(idx, 5) + ...
         delta * mpc.gen_aux_data(idx, 8); % 8th column is the heat rate
 	if verbose == 1
-    	fprintf('The ng price has changed %.2f in %s \n', delta, year)
+		fprintf('The ng price has changed %.2f in %s for %d gens\n', delta, year, length(find(idx)))
     end  
 	

@@ -10,7 +10,7 @@ function [offer] = setFixedcost(mpc, offer, caseInfo, verbose)
 %   See http://e4st.com/ for more info.
 
     % Set default argin
-    if nargin < 3
+    if nargin < 4
     	verbose = 1; % show a little debug information
     end
 

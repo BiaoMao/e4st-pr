@@ -72,7 +72,8 @@ function [mpc, offer, result] = retireGen(mpc, offer, result, caseInfo, group, v
 
     % Label the gen built in previous decades (newgen - 1)
     if strcmp(group, 'new')
-        mpc.newgen = mpc.newgen - 1; 
+        % Only apply for new generators
+        mpc.newgen(idxNew) = mpc.newgen(idxNew) - 1; 
     elseif strcmp(group, 'all')            
         mpc.newgen = mpc.newgen - 1; 
     end  

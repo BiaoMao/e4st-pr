@@ -97,7 +97,7 @@ function genRes = getGenRes(mpc, offer, result, caseInfo, yearInfo, year)
     end
 
     % Combine table
-    genRes.genTable = [genRes.genTable table(annualGen, usedCap,    shutDownCap, investCap, fixedCost, variableCost,...
+    genRes.genTable = [genRes.genTable table(annualGen, usedCap, shutDownCap, investCap, fixedCost, variableCost,...
                     tax, insurance, CO2, NOx, SO2, damCO2, damNOx, damSO2, LMPBygen)];   
 
     % Set the dl values to zero

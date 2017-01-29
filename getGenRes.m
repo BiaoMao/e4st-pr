@@ -85,20 +85,26 @@ function genRes = getGenRes(mpc, offer, result, caseInfo, yearInfo, year)
     fuelTypes = unique(fuels);
     tax = zeros(size(result.base.gen,1), 1);
     insurance = zeros(size(result.base.gen,1), 1);
+    cost2keep = zeros(size(result.base.gen,1), 1);
+    cost2build = zeros(size(result.base.gen,1), 1);
     for i = 1: length(fuelTypes)
         idxGen = find(strcmp(fuels, fuelTypes{i}));
         if strcmp(fuelTypes{i}, 'oswind')
             tax(idxGen) = 0;
             insurance(idxGen) = 0;
+            cost2keep(idxGen) = 0;
+            cost2build(idxGen) = caseInfo.genInfo{'oswind', 'Cost2Build'};
             continue;
         end
         tax(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Tax'} * caseInfo.nHours;
         insurance(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Insurance'} * caseInfo.nHours;
+        cost2keep(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Cost2Keep'} * caseInfo.nHours;
+        cost2build(idxGen) = fixedCost(idxGen) - cost2keep(idxGen) - insurance(idxGen) - tax(idxGen);
     end
 
     % Combine table
     genRes.genTable = [genRes.genTable table(annualGen, usedCap, shutDownCap, investCap, fixedCost, variableCost,...
-                    tax, insurance, CO2, NOx, SO2, damCO2, damNOx, damSO2, LMPBygen)];   
+                    cost2keep, cost2build, tax, insurance, CO2, NOx, SO2, damCO2, damNOx, damSO2, LMPBygen)];   
 
     % Set the dl values to zero
     idxDl = strcmp(genRes.genTable{:,'fuel'}, 'dl');

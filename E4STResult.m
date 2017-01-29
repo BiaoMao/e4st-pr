@@ -57,18 +57,38 @@ classdef E4STResult < matlab.mixin.Copyable
         end
 
         %% sumByfuel: summary result by fuels
-        function [outputs] = sumByfuel(genTable)
+        function [outputs] = sumByfuel(genRes)
             %% Get summary by fuels         
             func = @sum;
             % Only pass the variables that you want to sum
             inputVariables = {'annualGen','usedCap', 'shutDownCap', 'investCap'};
-            outputs = varfun(func, genTable.genTable,...
+            outputs = varfun(func, genRes.genTable,...
                     'GroupingVariables', {'fuel'}, 'InputVariables', inputVariables);
             capacityFactor = outputs{:, 'sum_annualGen'} ./ (outputs{:, 'sum_usedCap'} * 8760);
             outputs = [outputs array2table(capacityFactor)];
             % Remove 'dl' row
             idxDl = strcmp(outputs{:, 'fuel'}, 'dl');
             outputs(idxDl, :) = []; 
+        end
+
+        function [outputs] = fuelRes2Row(fuelRes, fuelType, colIdx)
+            %% Convert fuel table to one row        
+            outputs = table;
+            colSize = 5;
+            for i = 1 : size(fuelRes, 1)
+                if any(strcmp(fuelType, fuelRes{i, 'fuel'}))
+                    % Skip fuel types 
+                    continue;
+                end
+                curTable = [fuelRes(i, {'sum_annualGen',...
+                    'sum_usedCap', 'sum_shutDownCap', 'sum_investCap', 'capacityFactor'})];
+                curFuel = fuelRes{i, 'fuel'}{:};
+                curTable.Properties.VariableNames = {[curFuel '_annualGen'],...
+                    [curFuel '_usedCap'], [curFuel '_shutDownCap'],...
+                     [curFuel '_investCap'], [curFuel '_capacityFactor']};
+                curTable = curTable(:, colIdx);
+                outputs = [outputs curTable];
+            end
         end
 
         %% getMultipliers: get multipliers of from output constraints    
@@ -78,12 +98,12 @@ classdef E4STResult < matlab.mixin.Copyable
         end
 
         %% sumByall: summary results for the whole system
-        function [outputs] = sumBysys(genTable, busTable, caseInfo, result)
+        function [outputs] = sumBysys(genRes, busRes, caseInfo, result)
             % Only pass the variables that you want to sum
 
             % Remove 'dl' row
-            idxDl = strcmp(genTable.genTable{:, 'fuel'}, 'dl');            
-            genTable.genTable(idxDl, :) = [];  
+            idxDl = strcmp(genRes.genTable{:, 'fuel'}, 'dl');            
+            genRes.genTable(idxDl, :) = [];  
 
             func = @sum;
             inputVariables = {'annualGen', 'usedCap','investCap', 'shutDownCap', 'fixedCost',...
@@ -91,9 +111,9 @@ classdef E4STResult < matlab.mixin.Copyable
                             'damCO2', 'damNOx', 'damSO2'};
 
             %% Get gen summary for all
-            genSum = varfun(func, genTable.genTable, 'InputVariables', inputVariables);
-            genAverLmp = genTable.genTable{:,'annualGen'}' * genTable.genTable{:,'LMPBygen'} / genSum{1, 'sum_annualGen'};
-            loadAverLmp = busTable.busTable{:, 'annualLoads'}' * busTable.busTable{:, 'annualPrices'} / genSum{1, 'sum_annualGen'};    
+            genSum = varfun(func, genRes.genTable, 'InputVariables', inputVariables);
+            genAverLmp = genRes.genTable{:,'annualGen'}' * genRes.genTable{:,'LMPBygen'} / genSum{1, 'sum_annualGen'};
+            loadAverLmp = busRes.busTable{:, 'annualLoads'}' * busRes.busTable{:, 'annualPrices'} / genSum{1, 'sum_annualGen'};    
         
             objValue = -result.opf_results.f * sum(caseInfo.nHours);
 
@@ -290,16 +310,7 @@ classdef E4STResult < matlab.mixin.Copyable
                 weightedflow = 0;
                 posFlow = 0;
             end
-        end
-
-        %% calcCF: calculate capacity factor 
-        function [outputs] = calcCF(result, caseInfo, yearInfo, year)
-            genTable = E4STResult.getGentable(result, caseInfo, yearInfo, year);
-            outputs = varfun(@sum, genTable.genTable(:, {'fuel', 'newgen', 'annualGen', 'usedCap'}),...
-                'GroupingVariables', {'fuel', 'newgen'});
-            capacityFactor = outputs{:, 'sum_annualGen'} ./ (outputs{:, 'sum_usedCap'} * 8760);
-            outputs = [outputs array2table(capacityFactor)];
-        end        
+        end     
 
         % getCHline: get results of the CH line
         function [outputs] = getCHline(result)

@@ -68,22 +68,22 @@ classdef HydroEI
                 idx_members = find(hydroMap(:,i));
                 n_members = length(idx_members);
                 
-                % Scale the hydro capacity to real data
-                mpc.gen(idx_members, PMAX) = mpc.gen(idx_members, PMAX) * caseInfo.hydroInfo{i, 'scaling'};
+                % % Scale the hydro capacity to real data
+                % mpc.gen(idx_members, PMAX) = mpc.gen(idx_members, PMAX) * caseInfo.hydroInfo{i, 'scaling'};
 
-                % Set the low hydro for QC&NL
-                if i == 4
-                    curCap = sum(mpc.gen(idx_members, PMAX));
-                    scaler = (curCap + caseInfo.deltaQCNL) / curCap;
-                    mpc.gen(idx_members, PMAX) = mpc.gen(idx_members, PMAX) * scaler;
-                end
+                % % Set the low hydro for QC&NL
+                % if i == 4
+                %     curCap = sum(mpc.gen(idx_members, PMAX));
+                %     scaler = (curCap + caseInfo.deltaQCNL) / curCap;
+                %     mpc.gen(idx_members, PMAX) = mpc.gen(idx_members, PMAX) * scaler;
+                % end
 
-                % Set the low hydro for Ontario
-                if i == 2
-                    curCap = sum(mpc.gen(idx_members, PMAX));
-                    scaler = (curCap + caseInfo.deltaON) / curCap;
-                    mpc.gen(idx_members, PMAX) = mpc.gen(idx_members, PMAX) * scaler;
-                end
+                % % Set the low hydro for Ontario
+                % if i == 2
+                %     curCap = sum(mpc.gen(idx_members, PMAX));
+                %     scaler = (curCap + caseInfo.deltaON) / curCap;
+                %     mpc.gen(idx_members, PMAX) = mpc.gen(idx_members, PMAX) * scaler;
+                % end
                 
                 % Get the hydro CF
                 cap(idx: idx+n_members-1) = mpc.gen(idx_members, PMAX) * caseInfo.hydroInfo{i, 'Cf'};

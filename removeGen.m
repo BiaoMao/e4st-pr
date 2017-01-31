@@ -19,13 +19,13 @@ function [mpc, offer] = removeGen(mpc, offer, idx)
     mpc.ng = size(mpc.gen, 1); 
 
     % Update total_output constraints
-    if isfield(mpc, 'total_output')
+    if isfield(mpc, 'total_output') && ~isempty(mpc.total_output)
         mpc.total_output.map(:, idx) = [];
         mpc.total_output.coeff(idx, :) = [];
     end
 
     % Update capacity constraints
-    if isfield(mpc, 'caplim')
+    if isfield(mpc, 'caplim') && ~isempty(mpc.caplim)
         mpc.caplim.map(:, idx) = [];
     end
 end

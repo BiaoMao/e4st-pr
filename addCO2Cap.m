@@ -37,7 +37,8 @@ function mpc = addCO2Cap(mpc, isInCap, cap, verbose)
     mpc.total_output.cap = [mpc.total_output.cap; cap]; 
 
     % Second column of coeff is CO2 emission rate
-    if size(mpc.total_output.coeff, 2) == 1
+    if size(mpc.total_output.coeff, 2) <= 1
+        mpc.total_output.coeff(:, 1) = ones(size(mpc.gen, 1), 1);
         mpc.total_output.coeff(:, 2) = mpc.gen_aux_data(:,1);
     end
 

@@ -15,28 +15,61 @@ classdef HydroEI
     
     methods (Static)	
         %% constrainHydro: set the hydro constraint cap
-        function [mpc] = setHydroCap0(mpc, caseInfo, verbose)
+        function [mpc] = setHydroAfCf(mpc, caseInfo, verbose)
             % Set default argin
             if nargin < 3
                 verbose = 1; % show a little debug information
             end
 
+            % Check if total_output filed is initialized
+            if ~isfield(mpc, 'total_output') || isempty(mpc.total_output)
+                mpc.total_output.map = [];
+                mpc.total_output.cap = [];
+                mpc.total_output.coeff = [];
+                mpc.total_output.type = [];
+            end
+
+            % Extract the bus info
             define_constants;
-            hydroMap = caseInfo.hydroMap{:, :};
-            groups = size(hydroMap, 2);            
-            n_hydro = length(find(hydroMap));            
-            map = zeros(n_hydro, mpc.ng);
+            genBus = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
+            genBus = join(genBus, caseInfo.locationInfo);
+
+            % For all US hydro
+            hydroMap = strcmp(genBus{:, 'Nation'}, 'US') & strcmp(mpc.genfuel, 'hydro');
+
+            % Ontario
+            hydroMap = [hydroMap strcmp(genBus{:, 'State'}, 'ontario') & strcmp(mpc.genfuel, 'hydro')];
+
+            % Manitoba
+            hydroMap = [hydroMap strcmp(genBus{:, 'State'}, 'manitoba') & strcmp(mpc.genfuel, 'hydro')];
+            
+            % Quebec & NL
+            hydroMap = [hydroMap (strcmp(genBus{:, 'State'}, 'quebec') | strcmp(genBus{:, 'State'}, 'newfoundland and labrador'))...
+                     & strcmp(mpc.genfuel, 'hydro')];
+
+            % New Brunswick & Nova Scotia
+            hydroMap = [hydroMap (strcmp(genBus{:, 'State'}, 'new brunswick') | strcmp(genBus{:, 'State'}, 'nova scotia'))...
+                     & strcmp(mpc.genfuel, 'hydro')];
+
+            % SK
+            hydroMap = [hydroMap (strcmp(genBus{:, 'State'}, 'saskatchewan'))...
+                     & strcmp(mpc.genfuel, 'hydro')];
+
+            groups = size(hydroMap, 2); % find all hydro groups 
+            n_hydro = length(find(hydroMap)); % find all hydro in the map            
+            map = zeros(n_hydro, size(mpc.gen, 1));
             cap = zeros(n_hydro, 1);
-            coeff = ones(mpc.ng, 1);
+            coeff = ones(size(mpc.gen, 1), 1);
             coeff_type = ones(n_hydro, 1);
             idx = 1;
+
             % Scale for each constraint groups
             for i = 1:groups
                 idx_members = find(hydroMap(:,i));
                 n_members = length(idx_members);
                 
                 % Scale the hydro capacity to real data
-                mpc.gen(idx_members, PMAX) = mpc.gen(idx_members, PMAX) * caseInfo.hydroScaling(i);
+                mpc.gen(idx_members, PMAX) = mpc.gen(idx_members, PMAX) * caseInfo.hydroInfo{i, 'scaling'};
 
                 % Set the low hydro for QC&NL
                 if i == 4
@@ -53,22 +86,28 @@ classdef HydroEI
                 end
                 
                 % Get the hydro CF
-                cap(idx: idx+n_members-1) = mpc.gen(idx_members, PMAX) * caseInfo.hydroCf(i);
+                cap(idx: idx+n_members-1) = mpc.gen(idx_members, PMAX) * caseInfo.hydroInfo{i, 'Cf'};
                 % Re-build map for each hydro
                 for j = 1:n_members
                     map(idx, idx_members(j)) = 1;
                     idx = idx + 1;
                 end
-            end
-            mpc.total_output.map = map;
-            mpc.total_output.cap = cap;
-            mpc.total_output.coeff = coeff;
-            mpc.total_output.type = coeff_type;
 
-            % Debug information
-            if verbose == 1
-                fprintf('Hydro constraints in Year0 are set in EI\n');
+                % Set hydro AFs
+                mpc.availability_factor(idx_members, :) = caseInfo.hydroInfo{i, 'Af'};
+
+                % Set Pmin of Hydro
+                mpc.gen(idx_members, PMIN) = mpc.gen(idx_members, PMAX) * caseInfo.hydroInfo{i, 'Pmin'};
+           
+                % Debug information
+                if verbose == 1
+                    fprintf('%d hydro constraints in Gourp %d are set in EI\n', n_members, i);
+                end
             end
+            mpc.total_output.map = [mpc.total_output.map; map];
+            mpc.total_output.cap = [mpc.total_output.cap; cap];
+            mpc.total_output.coeff(:, 1) = coeff; % first column is all ones
+            mpc.total_output.type = [mpc.total_output.type; coeff_type];  
         end
 
         %% setHydroCap10: definitely correct hydro cap in CA in 2025

@@ -1,5 +1,5 @@
-function [mpc, offer] = tweakCanada(mpc, offer, caseInfo, verbose)
-%% tweakCanada: make additional tweaks for Canada
+function [mpc, offer] = tweakCanadaWecc(mpc, offer, caseInfo, verbose)
+%% tweakCanada: make additional tweaks for Canada Wecc
 %   Require capacity additions in Alberta (AB): 600 MW of wind, and 2100 MW of NGCCs;
 %   Have no buildable generators in Canada, except in Alberta;
 %   For generators in Canada that shut down, remove them from the dataset;
@@ -24,9 +24,11 @@ function [mpc, offer] = tweakCanada(mpc, offer, caseInfo, verbose)
     idxCA = strcmp(genTable{:, 'Nation'}, 'CA') & ~strcmp(genTable{:, 'State'}, 'alberta') & ...
             ~strcmp(mpc.genfuel, 'dl') & mpc.newgen == 1;
     [mpc, offer] = removeGen(mpc, offer, idxCA);
+    genTable(idxCA, :) = []; % consistent with dim
     if verbose == 1
         fprintf('Remove %d buildable gen from Cananda except Alberta\n', length(find(idxCA)));
     end
+    
 
 
 

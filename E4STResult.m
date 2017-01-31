@@ -121,6 +121,35 @@ classdef E4STResult < matlab.mixin.Copyable
             outputs = [genSum table(genAverLmp, loadAverLmp, objValue)];
         end
 
+        %% sumSurplusEMFWecc: sum surplus for EMF case
+        function [outputs] = sumSurplusEMFWindWecc(sysRes, multipliers, mpc, result, caseInfo)
+            % Calculate surplus
+            % original obj value is hourly base
+
+            % Map the result table to variable
+            loadAverLmp = sysRes{1, 'loadAverLmp'};
+            genAverLmp = sysRes{1, 'genAverLmp'};
+
+            % Calculate CO2 payments based on cap-trade program
+            numCap = length(mpc.total_output.cap);
+            numMul = size(multipliers, 2);
+            co2Payment2Gov = multipliers{1, :} * result.total_output.qty(numCap - numMul + 1 : numCap) * caseInfo.nHours;
+            co2Payment2Producer = co2Payment2Gov;
+
+            govRevenue = sysRes{1,'sum_tax'} + co2Payment2Gov;
+            producerProfit = genAverLmp * sysRes{1,'sum_annualGen'} - sysRes{1,'sum_fixedCost'} - sysRes{1,'sum_variableCost'}...
+                            - co2Payment2Producer;
+
+            consumerSurp = -result.opf_results.f * sum(caseInfo.nHours) + sysRes{1,'sum_fixedCost'} + sysRes{1,'sum_variableCost'}...
+                    - loadAverLmp * sysRes{1,'sum_annualGen'};
+            envirSurp = -sum(sysRes{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
+            merchanSurplus = sysRes{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
+            totalSurplus = sum([consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus]);
+
+            % Output the summary table
+            outputs = table(consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus, totalSurplus);
+        end
+
         %% sumSurplusBenWindWecc: sum surplus for BenWind case
         function [outputs] = sumSurplusBenWindWecc(sysRes, multipliers, mpc, result, caseInfo)
             % Calculate surplus

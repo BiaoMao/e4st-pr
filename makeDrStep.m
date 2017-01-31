@@ -27,7 +27,10 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     genTable = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
     genTable = join(genTable, busTable);
     pLoads = genTable{:, 'load'};    
-    defaultPrices = genTable{:, 'lmp'};    
+    defaultPrices = genTable{:, 'lmp'};   
+
+    % Apply load growth to pivot loads
+    pLoads = pLoads * caseInfo.loadGrowth.^yearInfo{'loadYearDelta', curYear};
    
     % Select 'dl' only
     iDl = find(strcmp(mpc.genfuel(:, 1), 'dl')); % Find loads needed to add step gencost

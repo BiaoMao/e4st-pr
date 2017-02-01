@@ -94,7 +94,7 @@ classdef E4STResult < matlab.mixin.Copyable
         %% getMultipliers: get multipliers of from output constraints    
         %   idx: index of multipliers in cap         
         function [outputs] = getMultipliers(result, idx)
-            outputs = result.total_output.mu(idx) / 8760;            
+            outputs = result.total_output.mu(idx);            
         end
 
         %% sumByall: summary results for the whole system

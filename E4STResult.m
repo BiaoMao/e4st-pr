@@ -14,8 +14,8 @@ classdef E4STResult < matlab.mixin.Copyable
 
     end
     
-    methods (Static)
         %% sumBynation: summary result by US and CA
+    methods (Static)
         function [outputs] = sumBynation(genTable, busTable)
             %% Get summary by nation       
 
@@ -107,22 +107,22 @@ classdef E4STResult < matlab.mixin.Copyable
 
             func = @sum;
             inputVariables = {'annualGen', 'usedCap','investCap', 'shutDownCap', 'fixedCost',...
-                            'variableCost', 'tax', 'insurance', 'cost2keep', 'cost2build', 'CO2', 'NOx', 'SO2',...
-                            'damCO2', 'damNOx', 'damSO2'};
+                            'variableCost', 'tax', 'directCost','insurance', 'cost2keep', 'cost2build',...
+                            'annual_CAPEX', 'CO2', 'NOx', 'SO2', 'damCO2', 'damNOx', 'damSO2'};
 
             %% Get gen summary for all
             genSum = varfun(func, genRes.genTable, 'InputVariables', inputVariables);
             genAverLmp = genRes.genTable{:,'annualGen'}' * genRes.genTable{:,'LMPBygen'} / genSum{1, 'sum_annualGen'};
             loadAverLmp = busRes.busTable{:, 'annualLoads'}' * busRes.busTable{:, 'annualPrices'} / genSum{1, 'sum_annualGen'};    
         
-            objValue = -result.opf_results.f * sum(caseInfo.nHours);
+            objValue = -result.opf_results.f * sum(caseInfo.hours);
 
             % Output the summary table
             outputs = [genSum table(genAverLmp, loadAverLmp, objValue)];
         end
 
         %% sumSurplusEMFWecc: sum surplus for EMF case
-        function [outputs] = sumSurplusEMFWindWecc(sysRes, multipliers, mpc, result, caseInfo)
+        function [outputs] = sumSurplusEMFWindWecc(sysRes, multipliers, qty_Multipliers, mpc, result, caseInfo)
             % Calculate surplus
             % original obj value is hourly base
 
@@ -133,14 +133,18 @@ classdef E4STResult < matlab.mixin.Copyable
             % Calculate CO2 payments based on cap-trade program
             numCap = length(mpc.total_output.cap);
             numMul = size(multipliers, 2);
-            co2Payment2Gov = multipliers{1, :} * result.total_output.qty(numCap - numMul + 1 : numCap) * caseInfo.nHours;
+            co2Payment2Gov = multipliers{1, :} * qty_Multipliers;
             co2Payment2Producer = co2Payment2Gov;
 
             govRevenue = sysRes{1,'sum_tax'} + co2Payment2Gov;
-            producerProfit = genAverLmp * sysRes{1,'sum_annualGen'} - sysRes{1,'sum_fixedCost'} - sysRes{1,'sum_variableCost'}...
+            % producerProfit = genAverLmp * sysRes{1,'sum_annualGen'} - sysRes{1,'sum_fixedCost'} - sysRes{1,'sum_variableCost'}...
+            %                 - co2Payment2Producer;
+            producerProfit = genAverLmp * sysRes{1,'sum_annualGen'} - sysRes{1,'sum_directCost'}...
                             - co2Payment2Producer;
 
-            consumerSurp = -result.opf_results.f * sum(caseInfo.nHours) + sysRes{1,'sum_fixedCost'} + sysRes{1,'sum_variableCost'}...
+            % consumerSurp = -result.opf_results.f * sum(caseInfo.nHours) + sysRes{1,'sum_fixedCost'} + sysRes{1,'sum_variableCost'}...
+            %         - loadAverLmp * sysRes{1,'sum_annualGen'};
+            consumerSurp = -result.opf_results.f * sum(caseInfo.hours) + sysRes{1,'sum_directCost'}...
                     - loadAverLmp * sysRes{1,'sum_annualGen'};
             envirSurp = -sum(sysRes{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
             merchanSurplus = sysRes{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
@@ -162,14 +166,14 @@ classdef E4STResult < matlab.mixin.Copyable
             % Calculate CO2 payments based on cap-trade program
             numCap = length(mpc.total_output.cap);
             numMul = size(multipliers, 2);
-            co2Payment2Gov = multipliers{1, :} * result.total_output.qty(numCap - numMul + 1 : numCap) * caseInfo.nHours;
+            co2Payment2Gov = multipliers{1, :} * result.total_output.qty(numCap - numMul + 1 : numCap) * sum(caseInfo.hours);
             co2Payment2Producer = co2Payment2Gov;
 
             govRevenue = sysRes{1,'sum_tax'} + co2Payment2Gov;
             producerProfit = genAverLmp * sysRes{1,'sum_annualGen'} - sysRes{1,'sum_fixedCost'} - sysRes{1,'sum_variableCost'}...
                             - co2Payment2Producer;
 
-            consumerSurp = -result.opf_results.f * sum(caseInfo.nHours) + sysRes{1,'sum_fixedCost'} + sysRes{1,'sum_variableCost'}...
+            consumerSurp = -result.opf_results.f * sum(caseInfo.hours) + sysRes{1,'sum_fixedCost'} + sysRes{1,'sum_variableCost'}...
                     - loadAverLmp * sysRes{1,'sum_annualGen'};
             envirSurp = -sum(sysRes{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
             merchanSurplus = sysRes{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
@@ -205,7 +209,7 @@ classdef E4STResult < matlab.mixin.Copyable
             producerProfit = genAverLmp * genSum{1,'sum_annualGen'} - genSum{1,'sum_fixedCost'} - genSum{1,'sum_variableCost'}...
                             - co2Payment2Producer;
 
-            consumerSurp = -result.f * sum(caseInfo.nHours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - loadAverLmp * genSum{1,'sum_annualGen'};
+            consumerSurp = -result.f * sum(caseInfo.hours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - loadAverLmp * genSum{1,'sum_annualGen'};
             envirSurp = -sum(genSum{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
             merchanSurplus = genSum{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
             totalSurplus = sum([consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus]);
@@ -251,7 +255,7 @@ classdef E4STResult < matlab.mixin.Copyable
             producerProfit = genAverLmp * genSum{1,'sum_annualGen'} - genSum{1,'sum_fixedCost'} - genSum{1,'sum_variableCost'}...
                             - co2Payment2Producer;
 
-            consumerSurp = -result.f * sum(caseInfo.nHours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - loadAverLmp * genSum{1,'sum_annualGen'};
+            consumerSurp = -result.f * sum(caseInfo.hours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - loadAverLmp * genSum{1,'sum_annualGen'};
             envirSurp = -sum(genSum{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
             merchanSurplus = genSum{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
             totalSurplus = sum([consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus]);
@@ -292,7 +296,7 @@ classdef E4STResult < matlab.mixin.Copyable
             producerProfit = genAverLmp * genSum{1,'sum_annualGen'} - genSum{1,'sum_fixedCost'} - genSum{1,'sum_variableCost'}...
                             - co2Payment2Producer;
 
-            consumerSurp = -result.f * sum(caseInfo.nHours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - loadAverLmp * genSum{1,'sum_annualGen'};
+            consumerSurp = -result.f * sum(caseInfo.hours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - loadAverLmp * genSum{1,'sum_annualGen'};
             envirSurp = -sum(genSum{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
             merchanSurplus = genSum{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
             totalSurplus = sum([consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus]);
@@ -329,7 +333,7 @@ classdef E4STResult < matlab.mixin.Copyable
             producerProfit = genAverLmp * genSum{1,'sum_annualGen'} - genSum{1,'sum_fixedCost'} - genSum{1,'sum_variableCost'}...
                             - co2Payment2Producer;
 
-            consumerSurp = -result.f * sum(caseInfo.nHours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - loadAverLmp * genSum{1,'sum_annualGen'};
+            consumerSurp = -result.f * sum(caseInfo.hours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - loadAverLmp * genSum{1,'sum_annualGen'};
             envirSurp = -sum(genSum{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
             merchanSurplus = genSum{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
             totalSurplus = sum([consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus]);
@@ -359,7 +363,7 @@ classdef E4STResult < matlab.mixin.Copyable
         function [profit, weightedflow, posFlow] = calcLineprofit(result)
             chline = E4STResult.getCHline(result);
             if length(chline) > 1
-                profit = abs((chline(:,1) .* E4STResult.caseInfo.nHours)') * abs(chline(:,2)); 
+                profit = abs((chline(:,1) .* E4STResult.caseInfo.hours)') * abs(chline(:,2)); 
                 weightedflow = abs(chline(:,1))' * E4STResult.caseInfo.afProb;
                 pos_idx = chline(:,1) > 0;
                 posFlow = chline(pos_idx, 1)' * E4STResult.caseInfo.afProb(pos_idx);

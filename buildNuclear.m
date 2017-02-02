@@ -28,7 +28,9 @@ function [mpc, offer] = buildNuclear(mpc, offer, caseInfo, newLoc, yearInfo, yea
     if strcmp(newLoc, 'all')
         iBus2build = ~strcmp(mpc.genfuel, 'dl'); % get all generators bus
     elseif strcmp(newLoc, 'exist')
-        iBus2build = strcmp(mpc.genfuel, newType) & (offer(:, 2) >= 1000);
+        iBus2build = strcmp(mpc.genfuel, 'hydro') |...
+            strcmp(mpc.genfuel, 'coal') |...
+            (strcmp(mpc.genfuel, 'ng') & (offer(:, 2) >= 200));
     end
     busId = unique(mpc.gen(iBus2build, 1)); % get unique bus id
     numBus = length(busId);

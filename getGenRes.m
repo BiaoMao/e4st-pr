@@ -47,7 +47,7 @@ function genRes = getGenRes(mpc, offer, result, caseInfo, yearInfo, year)
     LMPBygen(idx, :) = genPrice(idx, :) * caseInfo.probability;
 
     % CO2, NOX, SO2
-    caseInfo.nHours = sum(caseInfo.hours);
+    % caseInfo.nHours = sum(caseInfo.hours);
     CO2 = mpc.gen_aux_data(:,1) .* annualGen;
     NOx = mpc.gen_aux_data(:,2) .* annualGen;
     SO2 = mpc.gen_aux_data(:,3) .* annualGen;    
@@ -77,7 +77,7 @@ function genRes = getGenRes(mpc, offer, result, caseInfo, yearInfo, year)
     % end
     
     % Calculate costs    
-    fixedCost = offer(:, 1) .* usedCap * caseInfo.nHours;
+    fixedCost = offer(:, 1) .* usedCap * sum(caseInfo.hours);
     variableCost = mpc.gencost(:, 5) .* annualGen;
 
     % Calculate tax and insurance: for used cap only
@@ -96,15 +96,21 @@ function genRes = getGenRes(mpc, offer, result, caseInfo, yearInfo, year)
             cost2build(idxGen) = caseInfo.genInfo{'oswind', 'Cost2Build'};
             continue;
         end
-        tax(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Tax'} * caseInfo.nHours;
-        insurance(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Insurance'} * caseInfo.nHours;
-        cost2keep(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Cost2Keep'} * caseInfo.nHours;
+        tax(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Tax'} * sum(caseInfo.hours);
+        insurance(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Insurance'} * sum(caseInfo.hours);
+        cost2keep(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Cost2Keep'} * sum(caseInfo.hours);
         cost2build(idxGen) = fixedCost(idxGen) - cost2keep(idxGen) - insurance(idxGen) - tax(idxGen);
     end
 
+    % 5yr_CAPEX for Cost2Build
+    annual_CAPEX = cost2build / 0.14902949 / 5;
+
+    % Direct cost
+    directCost = sum([cost2build, cost2keep, insurance, tax, variableCost], 2);
+
     % Combine table
     genRes.genTable = [genRes.genTable table(annualGen, usedCap, shutDownCap, investCap, fixedCost, variableCost,...
-                    cost2keep, cost2build, tax, insurance, CO2, NOx, SO2, damCO2, damNOx, damSO2, LMPBygen)];   
+                    cost2keep, cost2build, annual_CAPEX, tax, insurance, directCost, CO2, NOx, SO2, damCO2, damNOx, damSO2, LMPBygen)];   
 
     % Set the dl values to zero
     idxDl = strcmp(genRes.genTable{:,'fuel'}, 'dl');

@@ -16,6 +16,7 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
 
 	% Get the parameters
     curYear = ['Y' num2str(year)];
+    idxYear = find(strcmp(yearInfo.Properties.VariableNames, ['Y', num2str(year)]));
     elsty = yearInfo{'elasticity', curYear};
     disCost = caseInfo.discost;
     priceVec = caseInfo.priceVec;
@@ -30,7 +31,8 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     defaultPrices = genTable{:, 'lmp'};   
 
     % Apply load growth to pivot loads
-    pLoads = pLoads * caseInfo.loadGrowth.^yearInfo{'loadYearDelta', curYear};
+    % Load growth from the beginning
+    pLoads = pLoads * caseInfo.loadGrowth.^sum(yearInfo{'loadYearDelta', 2 : idxYear});
    
     % Select 'dl' only
     iDl = find(strcmp(mpc.genfuel(:, 1), 'dl')); % Find loads needed to add step gencost

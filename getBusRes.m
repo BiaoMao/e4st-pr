@@ -32,16 +32,16 @@ function busRes = getBusRes(result, caseInfo)
 
     %% Get summary results
     annualLoads = sum(loadHourly, 2);
-    annualPrices = sum(loadHourly .* lmpHourly, 2) ./ annualLoads;
+    LMPToLoad = sum(loadHourly .* lmpHourly, 2) ./ annualLoads;
     
     % Re-compute zero loads lmp without load weighting
     idx = annualLoads == 0;
-    annualPrices(idx) = lmpHourly(idx,:) * caseInfo.probability;
+    LMPToLoad(idx) = lmpHourly(idx,:) * caseInfo.probability;
 
     %% Combine table
     busArea = bus(:, 7); % bus area 
     bus = bus(:, 1); % in order to set            
-    busRes.busTable = table(bus, busArea, annualLoads, annualPrices);
+    busRes.busTable = table(bus, busArea, annualLoads, LMPToLoad);
 
     %% For optional and additional parts
     if isfield(caseInfo, 'locationInfo')
@@ -50,5 +50,5 @@ function busRes = getBusRes(result, caseInfo)
 
     %% Calclate system result
     busRes.sysLoad = sum(annualLoads);
-    busRes.sysLMP = annualPrices' * annualLoads / busRes.sysLoad;
+    busRes.sysLMP = LMPToLoad' * annualLoads / busRes.sysLoad;
 end

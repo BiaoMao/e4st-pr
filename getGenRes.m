@@ -41,10 +41,10 @@ function genRes = getGenRes(mpc, offer, result, caseInfo, yearInfo, year)
     
     % Compute generator weighted LMP
     annualGen = sum(genRes.genTableHourly, 2);
-    LMPBygen = sum(genPrice .* genRes.genTableHourly, 2) ./ annualGen;
+    LMPToGen = sum(genPrice .* genRes.genTableHourly, 2) ./ annualGen;
     % Re-compute zero generation without weighting
     idx = annualGen == 0;
-    LMPBygen(idx, :) = genPrice(idx, :) * caseInfo.probability;
+    LMPToGen(idx, :) = genPrice(idx, :) * caseInfo.probability;
 
     % CO2, NOX, SO2
     % caseInfo.nHours = sum(caseInfo.hours);
@@ -85,32 +85,26 @@ function genRes = getGenRes(mpc, offer, result, caseInfo, yearInfo, year)
     fuelTypes = unique(fuels);
     tax = zeros(size(result.base.gen,1), 1);
     insurance = zeros(size(result.base.gen,1), 1);
-    cost2keep = zeros(size(result.base.gen,1), 1);
-    cost2build = zeros(size(result.base.gen,1), 1);
+    costToKeep = zeros(size(result.base.gen,1), 1);
+    objCAPEX = zeros(size(result.base.gen,1), 1);
     for i = 1: length(fuelTypes)
         idxGen = find(strcmp(fuels, fuelTypes{i}));
         if strcmp(fuelTypes{i}, 'oswind')
             tax(idxGen) = 0;
             insurance(idxGen) = 0;
-            cost2keep(idxGen) = 0;
-            cost2build(idxGen) = caseInfo.genInfo{'oswind', 'Cost2Build'};
+            costToKeep(idxGen) = 0;
+            objCAPEX(idxGen) = caseInfo.genInfo{'oswind', 'Cost2Build'};
             continue;
         end
-        tax(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Tax'} * sum(caseInfo.hours);
-        insurance(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Insurance'} * sum(caseInfo.hours);
-        cost2keep(idxGen) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Cost2Keep'} * sum(caseInfo.hours);
-        cost2build(idxGen) = fixedCost(idxGen) - cost2keep(idxGen) - insurance(idxGen) - tax(idxGen);
+        tax(idxGen, 1) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Tax'} * sum(caseInfo.hours);
+        insurance(idxGen, 1) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Insurance'} * sum(caseInfo.hours);
+        costToKeep(idxGen, 1) = usedCap(idxGen) * caseInfo.genInfo{fuelTypes{i}, 'Cost2Keep'} * sum(caseInfo.hours);
+        objCAPEX(idxGen, 1) = fixedCost(idxGen) - costToKeep(idxGen) - insurance(idxGen) - tax(idxGen);
     end
-
-    % 5yr_CAPEX for Cost2Build
-    annual_CAPEX = cost2build / 0.14902949 / 5;
-
-    % Direct cost
-    directCost = sum([cost2build, cost2keep, insurance, tax, variableCost], 2);
 
     % Combine table
     genRes.genTable = [genRes.genTable table(annualGen, usedCap, shutDownCap, investCap, fixedCost, variableCost,...
-                    cost2keep, cost2build, annual_CAPEX, tax, insurance, directCost, CO2, NOx, SO2, damCO2, damNOx, damSO2, LMPBygen)];   
+                    costToKeep, objCAPEX, tax, insurance, CO2, NOx, SO2, damCO2, damNOx, damSO2, LMPToGen)];   
 
     % Set the dl values to zero
     idxDl = strcmp(genRes.genTable{:,'fuel'}, 'dl');

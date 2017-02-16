@@ -30,8 +30,8 @@ classdef E4STResult < matlab.mixin.Copyable
                             'damCO2', 'damNOx', 'damSO2'};
             outputs = varfun(func, genTable.genTable,...
                     'GroupingVariables','nation', 'InputVariables', inputVariables);
-            LMP = E4STResult.weightPrice(busTable.busTable(:, {'nation','annualLoads','annualPrices'}));
-            genPrice = E4STResult.weightPrice(genTable.genTable(:, {'nation','annualGen','LMPBygen'}));
+            LMP = E4STResult.weightPrice(busTable.busTable(:, {'nation','annualLoads','LMPToLoad'}));
+            genPrice = E4STResult.weightPrice(genTable.genTable(:, {'nation','annualGen','LMPToGen'}));
             outputs = [outputs table(LMP) table(genPrice)];
         end
 
@@ -51,8 +51,8 @@ classdef E4STResult < matlab.mixin.Copyable
                             'damCO2', 'damNOx', 'damSO2'};
             outputs = varfun(func, genTable.genTable,...
                     'GroupingVariables','state', 'InputVariables', inputVariables);
-            LMP = E4STResult.weightPrice(busTable.busTable(:, {'state','annualLoads','annualPrices'}));
-            genPrice = E4STResult.weightPrice(genTable.genTable(:, {'state','annualGen','LMPBygen'}));
+            LMP = E4STResult.weightPrice(busTable.busTable(:, {'state','annualLoads','LMPToLoad'}));
+            genPrice = E4STResult.weightPrice(genTable.genTable(:, {'state','annualGen','LMPToGen'}));
             outputs = [outputs table(LMP) table(genPrice)];
         end
 
@@ -93,12 +93,12 @@ classdef E4STResult < matlab.mixin.Copyable
 
         %% getMultipliers: get multipliers of from output constraints    
         %   idx: index of multipliers in cap         
-        function [outputs] = getMultipliers(result, idx)
-            outputs = result.total_output.mu(idx);            
+        function [multipliers] = getMultipliers(result, idx)
+            multipliers = result.total_output.mu(idx);  
         end
 
         %% sumByall: summary results for the whole system
-        function [outputs] = sumBysys(genRes, busRes, caseInfo, result)
+        function [outputs] = sumBysys(genRes, busRes, caseInfo, yearInfo, result, year)
             % Only pass the variables that you want to sum
 
             % Remove 'dl' row
@@ -106,19 +106,28 @@ classdef E4STResult < matlab.mixin.Copyable
             genRes.genTable(idxDl, :) = [];  
 
             func = @sum;
-            inputVariables = {'annualGen', 'usedCap','investCap', 'shutDownCap', 'fixedCost',...
-                            'variableCost', 'tax', 'directCost','insurance', 'cost2keep', 'cost2build',...
-                            'annual_CAPEX', 'CO2', 'NOx', 'SO2', 'damCO2', 'damNOx', 'damSO2'};
+            inputVariables = {'annualGen', 'usedCap','investCap', 'shutDownCap', ...
+                            'variableCost', 'tax', 'insurance', 'costToKeep', 'objCAPEX',...
+                            'CO2', 'NOx', 'SO2', 'damCO2', 'damNOx', 'damSO2'};
 
             %% Get gen summary for all
             genSum = varfun(func, genRes.genTable, 'InputVariables', inputVariables);
-            genAverLmp = genRes.genTable{:,'annualGen'}' * genRes.genTable{:,'LMPBygen'} / genSum{1, 'sum_annualGen'};
-            loadAverLmp = busRes.busTable{:, 'annualLoads'}' * busRes.busTable{:, 'annualPrices'} / genSum{1, 'sum_annualGen'};    
+            avgLMPtoGen = genRes.genTable{:,'annualGen'}' * genRes.genTable{:,'LMPToGen'} / genSum{1, 'sum_annualGen'};
+            avgLMPtoLoad = busRes.busTable{:, 'annualLoads'}' * busRes.busTable{:, 'LMPToLoad'} / genSum{1, 'sum_annualGen'};    
         
             objValue = -result.opf_results.f * sum(caseInfo.hours);
 
+            % Calculate wind subsidy
+            curYear = ['Y' num2str(year)];
+            idxWind = strcmp(genRes.genTable{:, 'fuel'}, 'wind');
+            totalWindSubsidy = sum(genRes.genTable{idxWind,'annualGen'}) * yearInfo{'windSub', curYear};
+
+            % Calculate solar subsidy: 30% cost2build
+            idxSolar = strcmp(genRes.genTable{:, 'fuel'}, 'solar');
+            objSolarSubsidy = sum(genRes.genTable{idxSolar,'objCAPEX'}) * 0.3 / 0.7;
+
             % Output the summary table
-            outputs = [genSum table(genAverLmp, loadAverLmp, objValue)];
+            outputs = [genSum table(avgLMPtoGen, avgLMPtoLoad, totalWindSubsidy, objSolarSubsidy, objValue)];
         end
 
         %% sumSurplusEMFWecc: sum surplus for EMF case
@@ -127,31 +136,31 @@ classdef E4STResult < matlab.mixin.Copyable
             % original obj value is hourly base
 
             % Map the result table to variable
-            loadAverLmp = sysRes{1, 'loadAverLmp'};
-            genAverLmp = sysRes{1, 'genAverLmp'};
+            avgLMPtoLoad = sysRes{1, 'avgLMPtoLoad'};
+            avgLMPtoGen = sysRes{1, 'avgLMPtoGen'};
 
             % Calculate CO2 payments based on cap-trade program
             numCap = length(mpc.total_output.cap);
             numMul = size(multipliers, 2);
-            co2Payment2Gov = multipliers{1, :} * qty_Multipliers;
-            co2Payment2Producer = co2Payment2Gov;
+            co2PayToGov = multipliers{1, :} * qty_Multipliers;
+            co2PayFromProducer = co2PayToGov;
 
-            govRevenue = sysRes{1,'sum_tax'} + co2Payment2Gov;
-            % producerProfit = genAverLmp * sysRes{1,'sum_annualGen'} - sysRes{1,'sum_fixedCost'} - sysRes{1,'sum_variableCost'}...
-            %                 - co2Payment2Producer;
-            producerProfit = genAverLmp * sysRes{1,'sum_annualGen'} - sysRes{1,'sum_directCost'}...
-                            - co2Payment2Producer;
+            govRevenue = sysRes{1,'sum_tax'} + co2PayToGov;
+            % welProProfit = avgLMPtoGen * sysRes{1,'sum_annualGen'} - sysRes{1,'sum_fixedCost'} - sysRes{1,'sum_variableCost'}...
+            %                 - co2PayFromProducer;
+            welProProfit = avgLMPtoGen * sysRes{1,'sum_annualGen'} - sysRes{1,'sum_directCost'}...
+                            - co2PayFromProducer;
 
             % consumerSurp = -result.opf_results.f * sum(caseInfo.nHours) + sysRes{1,'sum_fixedCost'} + sysRes{1,'sum_variableCost'}...
-            %         - loadAverLmp * sysRes{1,'sum_annualGen'};
+            %         - avgLMPtoLoad * sysRes{1,'sum_annualGen'};
             consumerSurp = -result.opf_results.f * sum(caseInfo.hours) + sysRes{1,'sum_directCost'}...
-                    - loadAverLmp * sysRes{1,'sum_annualGen'};
+                    - avgLMPtoLoad * sysRes{1,'sum_annualGen'};
             envirSurp = -sum(sysRes{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
-            merchanSurplus = sysRes{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
-            totalSurplus = sum([consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus]);
+            merchanSurplus = sysRes{1,'sum_annualGen'} * (avgLMPtoLoad - avgLMPtoGen);
+            totalSurplus = sum([consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus]);
 
             % Output the summary table
-            outputs = table(consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus, totalSurplus);
+            outputs = table(consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus, totalSurplus);
         end
 
         %% sumSurplusBenWindWecc: sum surplus for BenWind case
@@ -160,27 +169,50 @@ classdef E4STResult < matlab.mixin.Copyable
             % original obj value is hourly base
 
             % Map the result table to variable
-            loadAverLmp = sysRes{1, 'loadAverLmp'};
-            genAverLmp = sysRes{1, 'genAverLmp'};
+            avgLMPtoLoad = sysRes{1, 'avgLMPtoLoad'};
+            avgLMPtoGen = sysRes{1, 'avgLMPtoGen'};
 
             % Calculate CO2 payments based on cap-trade program
             numCap = length(mpc.total_output.cap);
-            numMul = size(multipliers, 2);
-            co2Payment2Gov = multipliers{1, :} * result.total_output.qty(numCap - numMul + 1 : numCap) * sum(caseInfo.hours);
-            co2Payment2Producer = co2Payment2Gov;
+            co2PayToGov = multipliers{1, 1 : 2} * result.total_output.qty(numCap - 1 : numCap) * sum(caseInfo.hours);
+            co2PayFromProducer = co2PayToGov;
 
-            govRevenue = sysRes{1,'sum_tax'} + co2Payment2Gov;
-            producerProfit = genAverLmp * sysRes{1,'sum_annualGen'} - sysRes{1,'sum_fixedCost'} - sysRes{1,'sum_variableCost'}...
-                            - co2Payment2Producer;
+            % Full CAPEX amount, we need to DIVIDE by 0.14902949
+            fullCAPEX = sysRes{1, 'sum_objCAPEX'} / 0.14902949;
+            fullSolarSubsidy = sysRes{1, 'objSolarSubsidy'} / 0.14902949;
 
-            consumerSurp = -result.opf_results.f * sum(caseInfo.hours) + sysRes{1,'sum_fixedCost'} + sysRes{1,'sum_variableCost'}...
-                    - loadAverLmp * sysRes{1,'sum_annualGen'};
-            envirSurp = -sum(sysRes{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
-            merchanSurplus = sysRes{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
-            totalSurplus = sum([consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus]);
+            % Full CAPEX amount divided by number of years
+            welCAPEX = fullCAPEX / 5;
+            welSolarSubsidy = fullSolarSubsidy / 5;
+
+            producerCost = sysRes{1, 'sum_variableCost'} + welCAPEX +...
+                sysRes{1, 'sum_costToKeep'} + sysRes{1, 'sum_tax'} +...
+                sysRes{1, 'sum_insurance'} + co2PayFromProducer;
+                   
+
+            govRevenue = sysRes{1,'sum_tax'} + co2PayToGov -...
+                        sysRes{1,'totalWindSubsidy'} - welSolarSubsidy;
+            
+            objProProfit = avgLMPtoGen * sysRes{1,'sum_annualGen'} -...
+                (sysRes{1, 'sum_variableCost'} + sysRes{1, 'sum_objCAPEX'} +...
+                sysRes{1, 'sum_costToKeep'} + sysRes{1, 'sum_tax'} +...
+                sysRes{1, 'sum_insurance'});
+
+            welProProfit = avgLMPtoGen * sysRes{1,'sum_annualGen'} - producerCost;
+
+            envirSurp = -sum(sysRes{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});   
+
+            merchanSurplus = sysRes{1,'sum_annualGen'} * (avgLMPtoLoad - avgLMPtoGen);
+
+            consumerSurp = sysRes{1,'objValue'} - objProProfit - merchanSurplus;
+
+            totalSurplus = sum([consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus]);
+
+            proCostWOTransfer = producerCost - govRevenue;
 
             % Output the summary table
-            outputs = table(consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus, totalSurplus);
+            outputs = table(consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus, totalSurplus,...
+                producerCost, proCostWOTransfer, welCAPEX, fullCAPEX, objProProfit, co2PayToGov, welSolarSubsidy);
         end
 
         %% sumSurplusRPSRGGI: sum surplus for rpsrggi  case
@@ -189,33 +221,33 @@ classdef E4STResult < matlab.mixin.Copyable
             % original obj value is hourly base
 
             % Map the result table to variable
-            loadAverLmp = genSum{1, 'loadAverLmp'};
-            genAverLmp = genSum{1, 'genAverLmp'};
+            avgLMPtoLoad = genSum{1, 'avgLMPtoLoad'};
+            avgLMPtoGen = genSum{1, 'avgLMPtoGen'};
 
             rggiCo2 = varfun(@sum, genTable.genTable, 'InputVariables', 'CO2', 'GroupingVariables', 'isRGGI');
             idxRGGI = rggiCo2{:, 'isRGGI'} == 1;
 
             % Calculate CO2 payments based on CO2 emission price or cost of cap-trade program
             if iYear == 1
-                co2Payment2Gov = yearInfo.co2PriceRGGI(iYear) * rggiCo2{idxRGGI, 'sum_CO2'};
-                co2Payment2Producer = 0; % already included in the gencost
+                co2PayToGov = yearInfo.co2PriceRGGI(iYear) * rggiCo2{idxRGGI, 'sum_CO2'};
+                co2PayFromProducer = 0; % already included in the gencost
             else
                 multipliers = E4STResult.getMultipliers(result);
-                co2Payment2Gov = multipliers{1, 1} * rggiCo2{~idxRGGI, 'sum_CO2'} + multipliers{1, 2} * rggiCo2{idxRGGI, 'sum_CO2'};
-                co2Payment2Producer = co2Payment2Gov;
+                co2PayToGov = multipliers{1, 1} * rggiCo2{~idxRGGI, 'sum_CO2'} + multipliers{1, 2} * rggiCo2{idxRGGI, 'sum_CO2'};
+                co2PayFromProducer = co2PayToGov;
             end
 
-            govRevenue = genSum{1,'sum_tax'} + co2Payment2Gov;
-            producerProfit = genAverLmp * genSum{1,'sum_annualGen'} - genSum{1,'sum_fixedCost'} - genSum{1,'sum_variableCost'}...
-                            - co2Payment2Producer;
+            govRevenue = genSum{1,'sum_tax'} + co2PayToGov;
+            welProProfit = avgLMPtoGen * genSum{1,'sum_annualGen'} - genSum{1,'sum_fixedCost'} - genSum{1,'sum_variableCost'}...
+                            - co2PayFromProducer;
 
-            consumerSurp = -result.f * sum(caseInfo.hours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - loadAverLmp * genSum{1,'sum_annualGen'};
+            consumerSurp = -result.f * sum(caseInfo.hours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - avgLMPtoLoad * genSum{1,'sum_annualGen'};
             envirSurp = -sum(genSum{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
-            merchanSurplus = genSum{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
-            totalSurplus = sum([consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus]);
+            merchanSurplus = genSum{1,'sum_annualGen'} * (avgLMPtoLoad - avgLMPtoGen);
+            totalSurplus = sum([consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus]);
 
             % Output the summary table
-            outputs = table(consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus, totalSurplus);
+            outputs = table(consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus, totalSurplus);
         end
 
         %% sumSurplusCpp: sum surplus for cpp  case
@@ -224,8 +256,8 @@ classdef E4STResult < matlab.mixin.Copyable
             % original obj value is hourly base
 
             % Map the result table to variable
-            loadAverLmp = genSum{1, 'loadAverLmp'};
-            genAverLmp = genSum{1, 'genAverLmp'};
+            avgLMPtoLoad = genSum{1, 'avgLMPtoLoad'};
+            avgLMPtoGen = genSum{1, 'avgLMPtoGen'};
 
             % Get the fuel results
             [fuelResults] = E4STResult.sumByfuel(genTable, busTable);
@@ -246,22 +278,22 @@ classdef E4STResult < matlab.mixin.Copyable
                         (newWindCapCost * windSubsidyFac / (1 - windSubsidyFac))' * newWindCap) * 8760;
 
             multipliers = E4STResult.getMultipliersCPP(result);
-            co2Payment2Gov = tableGroup{:, 'multiplier'}' * tableGroup{:, 'totalCO2'};
-            co2Payment2Producer = co2Payment2Gov;
-            % co2Payment2Gov = yearInfo.emissionPrice(iYear, 1) * genSum{:, 'sum_CO2'};
-            % co2Payment2Producer = 0; % already included in the gencost 
+            co2PayToGov = tableGroup{:, 'multiplier'}' * tableGroup{:, 'totalCO2'};
+            co2PayFromProducer = co2PayToGov;
+            % co2PayToGov = yearInfo.emissionPrice(iYear, 1) * genSum{:, 'sum_CO2'};
+            % co2PayFromProducer = 0; % already included in the gencost 
 
-            govRevenue = genSum{1,'sum_tax'} + co2Payment2Gov - reSubsidy;
-            producerProfit = genAverLmp * genSum{1,'sum_annualGen'} - genSum{1,'sum_fixedCost'} - genSum{1,'sum_variableCost'}...
-                            - co2Payment2Producer;
+            govRevenue = genSum{1,'sum_tax'} + co2PayToGov - reSubsidy;
+            welProProfit = avgLMPtoGen * genSum{1,'sum_annualGen'} - genSum{1,'sum_fixedCost'} - genSum{1,'sum_variableCost'}...
+                            - co2PayFromProducer;
 
-            consumerSurp = -result.f * sum(caseInfo.hours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - loadAverLmp * genSum{1,'sum_annualGen'};
+            consumerSurp = -result.f * sum(caseInfo.hours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - avgLMPtoLoad * genSum{1,'sum_annualGen'};
             envirSurp = -sum(genSum{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
-            merchanSurplus = genSum{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
-            totalSurplus = sum([consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus]);
+            merchanSurplus = genSum{1,'sum_annualGen'} * (avgLMPtoLoad - avgLMPtoGen);
+            totalSurplus = sum([consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus]);
 
             % Output the summary table
-            outputs = table(consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus, totalSurplus);
+            outputs = table(consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus, totalSurplus);
         end      
 
         %% sumSurplusFastsim: sum surplus for fastsim  case
@@ -270,8 +302,8 @@ classdef E4STResult < matlab.mixin.Copyable
             % original obj value is hourly base
 
             % Map the result table to variable
-            loadAverLmp = genSum{1, 'loadAverLmp'};
-            genAverLmp = genSum{1, 'genAverLmp'};
+            avgLMPtoLoad = genSum{1, 'avgLMPtoLoad'};
+            avgLMPtoGen = genSum{1, 'avgLMPtoGen'};
 
             % Get the fuel results
             [fuelResults] = E4STResult.sumByfuel(genTable, busTable);
@@ -289,20 +321,20 @@ classdef E4STResult < matlab.mixin.Copyable
             windSubsidyFac = yearInfo.scalingSubsidyWind(iYear);
             reSubsidy = ((newSolarCapCost * pvSubsidyFac / (1 - pvSubsidyFac))' * newSolarCap + ...
                         (newWindCapCost * windSubsidyFac / (1 - windSubsidyFac))' * newWindCap) * 8760;
-            co2Payment2Gov = yearInfo.emissionPrice(iYear, 1) * genSum{:, 'sum_CO2'};
-            co2Payment2Producer = 0; % already included in the gencost 
+            co2PayToGov = yearInfo.emissionPrice(iYear, 1) * genSum{:, 'sum_CO2'};
+            co2PayFromProducer = 0; % already included in the gencost 
 
-            govRevenue = genSum{1,'sum_tax'} + co2Payment2Gov - reSubsidy;
-            producerProfit = genAverLmp * genSum{1,'sum_annualGen'} - genSum{1,'sum_fixedCost'} - genSum{1,'sum_variableCost'}...
-                            - co2Payment2Producer;
+            govRevenue = genSum{1,'sum_tax'} + co2PayToGov - reSubsidy;
+            welProProfit = avgLMPtoGen * genSum{1,'sum_annualGen'} - genSum{1,'sum_fixedCost'} - genSum{1,'sum_variableCost'}...
+                            - co2PayFromProducer;
 
-            consumerSurp = -result.f * sum(caseInfo.hours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - loadAverLmp * genSum{1,'sum_annualGen'};
+            consumerSurp = -result.f * sum(caseInfo.hours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - avgLMPtoLoad * genSum{1,'sum_annualGen'};
             envirSurp = -sum(genSum{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
-            merchanSurplus = genSum{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
-            totalSurplus = sum([consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus]);
+            merchanSurplus = genSum{1,'sum_annualGen'} * (avgLMPtoLoad - avgLMPtoGen);
+            totalSurplus = sum([consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus]);
 
             % Output the summary table
-            outputs = table(consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus, totalSurplus);
+            outputs = table(consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus, totalSurplus);
         end  
 
          %% sumSurplusRtp: sum surplus for rtp  case
@@ -311,8 +343,8 @@ classdef E4STResult < matlab.mixin.Copyable
             % original obj value is hourly base
 
             % Map the result table to variable
-            loadAverLmp = genSum{1, 'loadAverLmp'};
-            genAverLmp = genSum{1, 'genAverLmp'};
+            avgLMPtoLoad = genSum{1, 'avgLMPtoLoad'};
+            avgLMPtoGen = genSum{1, 'avgLMPtoGen'};
 
             % Get the fuel results
             [fuelResults] = E4STResult.sumByfuel(genTable, busTable);
@@ -327,19 +359,19 @@ classdef E4STResult < matlab.mixin.Copyable
 
             % Calculate CO2 payments based on CO2 emission price or cost of cap-trade program
             pvSubsidyFac = yearInfo.emissionPrice(iYear, 1) * genSum{:, 'sum_CO2'};
-            co2Payment2Producer = 0; % already included in the gencost 
+            co2PayFromProducer = 0; % already included in the gencost 
 
-            govRevenue = genSum{1,'sum_tax'} + co2Payment2Gov - reSubsidy;
-            producerProfit = genAverLmp * genSum{1,'sum_annualGen'} - genSum{1,'sum_fixedCost'} - genSum{1,'sum_variableCost'}...
-                            - co2Payment2Producer;
+            govRevenue = genSum{1,'sum_tax'} + co2PayToGov - reSubsidy;
+            welProProfit = avgLMPtoGen * genSum{1,'sum_annualGen'} - genSum{1,'sum_fixedCost'} - genSum{1,'sum_variableCost'}...
+                            - co2PayFromProducer;
 
-            consumerSurp = -result.f * sum(caseInfo.hours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - loadAverLmp * genSum{1,'sum_annualGen'};
+            consumerSurp = -result.f * sum(caseInfo.hours) + genSum{1,'sum_fixedCost'} + genSum{1,'sum_variableCost'} - avgLMPtoLoad * genSum{1,'sum_annualGen'};
             envirSurp = -sum(genSum{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});             
-            merchanSurplus = genSum{1,'sum_annualGen'} * (loadAverLmp - genAverLmp);
-            totalSurplus = sum([consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus]);
+            merchanSurplus = genSum{1,'sum_annualGen'} * (avgLMPtoLoad - avgLMPtoGen);
+            totalSurplus = sum([consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus]);
 
             % Output the summary table
-            outputs = table(consumerSurp, envirSurp, producerProfit, govRevenue, merchanSurplus, totalSurplus);
+            outputs = table(consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus, totalSurplus);
         end  
 
         %% getAllTable: get both genTable and busTable

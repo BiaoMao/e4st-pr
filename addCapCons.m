@@ -15,9 +15,10 @@ function mpc = addCapCons(mpc, caseInfo, group, verbose)
 	end
     
     define_constants;
-    capConstraints = caseInfo.capConstraints;
-    [m, n] = size(capConstraints);
-    numCons = m * n;
+    capMax = caseInfo.capMax;
+    capMin = caseInfo.capMin;
+    [m, n] = size(capMax);
+    % numCons = m * n;
     numGens = size(mpc.gen, 1);
     %map = zeros(numCons, numGens);
     %cap = zeros(numCons, 1);
@@ -43,39 +44,39 @@ function mpc = addCapCons(mpc, caseInfo, group, verbose)
     idx = 1;
     for i = 1 : m
         for j = 1 : n
-            mapIdx = strcmp(genBus{:, 'State'}, capConstraints.Properties.RowNames{i}) ...
-                & strcmp(mpc.genfuel, capConstraints.Properties.VariableNames{j}) & idxGroup;
+            mapIdx = strcmp(genBus{:, 'State'}, capMax.Properties.RowNames{i}) ...
+                & strcmp(mpc.genfuel, capMax.Properties.VariableNames{j}) & idxGroup;
             % Check if there is constraint in this group; -1 means no constraints
-            if capConstraints{i, j} == -1
+            if capMax{i, j} == -1
             	continue;
             end
             % Check if there is any gen in this group
             if ~any(mapIdx)
-                if capConstraints{i, j} ~= 0
-                    fprintf('No buildable %s exists in %s\n', capConstraints.Properties.VariableNames{j},...
-                        capConstraints.Properties.RowNames{i});
+                if capMax{i, j} ~= 0
+                    fprintf('No buildable %s exists in %s\n', capMax.Properties.VariableNames{j},...
+                        capMax.Properties.RowNames{i});
                 end
                 continue;
             end
             map(idx, :) = mapIdx;
             % Choose the min value for the targeted value and buildable cap
-            if sum(mpc.gen(mapIdx, PMAX)) < capConstraints{i, j}
-                fprintf('Not enough buildable %s exists in %s\n', capConstraints.Properties.VariableNames{j},...
-                     capConstraints.Properties.RowNames{i});
+            if sum(mpc.gen(mapIdx, PMAX)) < capMax{i, j}
+                fprintf('Not enough buildable %s exists in %s\n', capMax.Properties.VariableNames{j},...
+                     capMax.Properties.RowNames{i});
             end
-            capValue = min(capConstraints{i, j}, sum(mpc.gen(mapIdx, PMAX)));
-            cap(idx, 1) = capValue;
+            caplimMax(idx, 1) = min(capMax{i, j}, sum(mpc.gen(mapIdx, PMAX)));
+            caplimMin(idx, 1) = capMin{i, j};
             idx = idx + 1;
         end
     end
 
     % Update in mpc to make equality constraints
     mpc.caplim.map = map;
-    mpc.caplim.max = cap;
-    mpc.caplim.min = cap;
+    mpc.caplim.max = caplimMax;
+    mpc.caplim.min = caplimMin;
 
     % Debug information
     if verbose == 1
-        fprintf('Capacity constraints are added\n');
+        fprintf('%d Capacity constraints are added\n', size(mpc.caplim.max, 1));
     end
 end

@@ -14,6 +14,8 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
         verbose = 1; % show a little debug information
     end
 
+    define_constants;
+
 	% Get the parameters
     curYear = ['Y' num2str(year)];
     idxYear = find(strcmp(yearInfo.Properties.VariableNames, ['Y', num2str(year)]));
@@ -23,16 +25,23 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
 
     % Calculate the pivot points and defualt prices
     % Convert to gen bus index first
-    busTable = array2table([mpc.bus(:, 1), busRes.loadHourly(:, hour), busRes.lmpHourly(:, hour)],...
-        'VariableNames', {'bus', 'load', 'lmp'});
+    busTable = array2table([mpc.bus(:, 1), busRes.loadHourly(:, hour), busRes.lmpHourly(:, hour), mpc.bus(:, BUS_AREA)],...
+        'VariableNames', {'bus', 'load', 'lmp', 'area'});
     genTable = array2table(mpc.gen(:, 1), 'VariableNames', {'bus'});
     genTable = join(genTable, busTable);
+    % Convert load to MW
+    genTable{:, 'load'} = genTable{:, 'load'} / caseInfo.hours(hour); 
     pLoads = genTable{:, 'load'};    
+    loadArea = genTable{:, 'area'};
     defaultPrices = genTable{:, 'lmp'};   
 
     % Apply load growth to pivot loads
     % Load growth from the beginning
-    pLoads = pLoads * caseInfo.loadGrowth.^sum(yearInfo{'loadYearDelta', 2 : idxYear});
+    nArea = length(unique(loadArea));
+    for i = 1 : nArea
+        idxArea = loadArea == i;
+        pLoads(idxArea) = pLoads(idxArea) * caseInfo.loadGrowth(i).^sum(yearInfo{'loadYearDelta', 2 : idxYear});  
+    end 
    
     % Select 'dl' only
     iDl = find(strcmp(mpc.genfuel(:, 1), 'dl')); % Find loads needed to add step gencost
@@ -48,9 +57,9 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     end
 
     % Calculate the starting point: [loads, basePrices] 
-    loads = pLoads .* ((defaultPrices + disCost) ./ (pPrice + disCost)).^elsty;
+    % loads = pLoads .* ((defaultPrices + disCost) ./ (pPrice + disCost)).^elsty;
             
-    loads = -loads; % make negative for 'dl'
+    % loads = -loads; % make negative for 'dl'
 
     % Now we want to transform our input vector of price percentages into actual prices
     % for the last two steps, we want to set very high prices, 
@@ -72,12 +81,14 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     vertexPrice = stepPrices;
     for i = 1 : 9
         vertexPrice(:, i) = mean([stepPrices(:, i), stepPrices(:, i + 1)], 2);
-        vertexPower(:, i) = loads .* ((stepPrices(:, i) + disCost) ./ (defaultPrices + disCost)) .^ elsty;        
+        % vertexPower(:, i) = loads .* ((stepPrices(:, i) + disCost) ./ (defaultPrices + disCost)) .^ elsty;   
+        vertexPower(:, i) = pLoads .* ((stepPrices(:, i) + disCost) ./ (pPrice + disCost)) .^ elsty;      
         if ~isreal(vertexPower(:, i))
             fprintf('Huge negative price at hour %d\n', hour);
         end
     end
     vertexPower(:, 10) = 0;
+    vertexPower = -vertexPower; % 'dl' have negative sign
 
     % Now we need to calculate the total costs, or f(p) in the gencost notation
     % We need to do this iteratively, as each (Power*Price) block must be added 
@@ -101,7 +112,7 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     % Filter out gencost with negative LMP and zero loads
     % Get index of negative and zero prices and zero loads
     % defaultPrices<0 will result in complex power 
-    idxNegLoad = defaultPrices <= 0 | loads == 0 | defaultPrices == 5000 | pLoads <= 0;
+    idxNegLoad = defaultPrices <= 0 | defaultPrices >= 5000 | pLoads <= 0;
     idxNegGencost = iDl(idxNegLoad); 
     if any(idxNegLoad)
         % Recover to original cost from col 1 to 5

@@ -18,7 +18,7 @@ function [mpc] = scaleBaseLoad(mpc, scalings, verbose)
     BUS_AREA = 7;        
     nArea = length(scalings);
     if nArea == 1 % there is only one area
-        [mpc.bus,mpc.gen] = scale_load(scalings, mpc.bus, mpc.gen);
+        [mpc.bus,mpc.gen] = scale_load(scalings, mpc.bus, mpc.gen);        
     else % there are multi-area
         loadZone = mpc.bus(:, BUS_AREA);
         opt = struct('pq','P');

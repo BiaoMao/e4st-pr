@@ -97,7 +97,7 @@ classdef HydroEI
                 mpc.availability_factor(idx_members, :) = caseInfo.hydroInfo{i, 'Af'};
 
                 % Set Pmin of Hydro
-                mpc.gen(idx_members, PMIN) = mpc.gen(idx_members, PMAX) * caseInfo.hydroInfo{i, 'Pmin'} * 0.75;
+                mpc.gen(idx_members, PMIN) = mpc.gen(idx_members, PMAX) * caseInfo.hydroInfo{i, 'Pmin'} * 0.5;
            
                 % Debug information
                 if verbose == 1

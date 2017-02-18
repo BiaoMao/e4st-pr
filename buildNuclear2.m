@@ -1,5 +1,7 @@
-function [mpc, offer] = buildNuclear(mpc, offer, caseInfo, verbose)
-%% buildWind: add buildable nuclear
+function [mpc, offer] = buildNuclear(mpc, offer, caseInfo, newLoc, yearInfo, year, verbose)
+%% buildNuclear: add buildable nuclear
+%   newLoc = 'all', build new gen at all buses
+%   newLoc = 'exist', build new gen at existing buses
 %
 %   E4ST
 %   Copyright (c) 2012-2016 by Power System Engineering Research Center (PSERC)
@@ -10,28 +12,36 @@ function [mpc, offer] = buildNuclear(mpc, offer, caseInfo, verbose)
 %   See http://e4st.com/ for more info.
     
     % Set default argin
-    if nargin < 4
+    if nargin < 7
         verbose = 1; % show a little debug information
     end
+    idxYear = find(strcmp(yearInfo.Properties.VariableNames, ['Y', num2str(year)]));
 
     % Initial data
-    nuclearInfo = caseInfo.newNuclearInfo;
-    genInfo = caseInfo.genInfo;   
-    newCap = nuclearInfo{:, 'Cap'};
+    genAf = caseInfo.genAf;
+    genInfo = caseInfo.genInfo;    
+    newType = 'nuclear';
 
-    % Build wind
-    fuelType = 'nuclear';
-    iGeninfo = strcmp(genInfo.Properties.RowNames, fuelType);
-    busId = nuclearInfo{:, 'bus'}; % get unique bus id
+    % Build coal
+    iGeninfo = strcmp(genInfo.Properties.RowNames, newType);
+    newCap = genInfo{iGeninfo, 'InstallCap'}; % Installed Cap
+    if strcmp(newLoc, 'all')
+        iBus2build = ~strcmp(mpc.genfuel, 'dl'); % get all generators bus
+    elseif strcmp(newLoc, 'exist')
+        iBus2build = (strcmp(mpc.genfuel, 'hydro') |...
+            strcmp(mpc.genfuel, 'coal') |...
+        strcmp(mpc.genfuel, 'ng')) & (mpc.gen(:, 9) >= 200);
+    end
+    busId = unique(mpc.gen(iBus2build, 1)); % get unique bus id
     numBus = length(busId);
 
     % Initial all the new table
     newGen = zeros(numBus,21);
     newGencost = zeros(numBus, size(mpc.gencost, 2));
-    newGenfuel = cell(numBus,1);
-    newGenaux = zeros(numBus,10);
+    newGenfuel = cell(numBus, 1);
+    newGenaux = zeros(numBus, 10);
     newGenindex = zeros(numBus,1);
-    newOffer = zeros(numBus,13);
+    newOffer = zeros(numBus, 13);
 
     % Add new gen table             
     newGen(:, 1) = busId; % bus number
@@ -43,10 +53,10 @@ function [mpc, offer] = buildNuclear(mpc, offer, caseInfo, verbose)
 
     % Add new gencost table
     newGencost(:, 1:4) = repmat([2 0 0 2], numBus, 1);
-    newGencost(:, 5) = genInfo{iGeninfo, 'Gencost'}; % gencost    
+    newGencost(:, 5) = genInfo{iGeninfo, 'Gencost'};% gencost
 
     % Add new gen fuel table
-    newGenfuel(:, 1) = {fuelType};
+    newGenfuel(:, 1) = {newType};
 
     % Add new gen aux data table
     newGenaux = repmat(genInfo{iGeninfo, 8 : 17}, numBus, 1);
@@ -55,8 +65,7 @@ function [mpc, offer] = buildNuclear(mpc, offer, caseInfo, verbose)
     newGenindex = ones(numBus, 1);
 
     % Add new AFs
-    startCol = find(strcmp(nuclearInfo.Properties.VariableNames, 'C1')); % Starting of AF table
-    newAf = nuclearInfo{:, startCol : end};
+    newAf = repmat(genAf{newType, :}, numBus, 1);
 
     % Add new offer table
     newOffer(:, 1) = sum(genInfo{iGeninfo, {'Cost2Keep', 'Cost2Build', 'Tax', 'Insurance'}}, 2); % fixed cost
@@ -77,6 +86,6 @@ function [mpc, offer] = buildNuclear(mpc, offer, caseInfo, verbose)
 
     % Debug information
     if verbose == 1
-        fprintf('Buildable %s are added\n', fuelType);
+        fprintf('%d buildable %s are added\n', numBus, newType);
     end
 end

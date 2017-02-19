@@ -163,8 +163,8 @@ classdef E4STResult < matlab.mixin.Copyable
             outputs = table(consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus, totalSurplus);
         end
 
-        %% sumSurplusBenWindWecc: sum surplus for BenWind case
-        function [outputs] = sumSurplusBenWindWecc(sysRes, multipliers, mpc, result, caseInfo)
+        %% sumSurplusBenWind: sum surplus for BenWind case
+        function [outputs] = sumSurplusBenWind(sysRes, multipliers, totalCO2, mpc, result, caseInfo)
             % Calculate surplus
             % original obj value is hourly base
 
@@ -174,7 +174,7 @@ classdef E4STResult < matlab.mixin.Copyable
 
             % Calculate CO2 payments based on cap-trade program
             numCap = length(mpc.total_output.cap);
-            co2PayToGov = multipliers{1, 1 : 2} * result.total_output.qty(numCap - 1 : numCap) * sum(caseInfo.hours);
+            co2PayToGov = multipliers{1, 1 : 2} * totalCO2';
             co2PayFromProducer = co2PayToGov;
 
             % Full CAPEX amount, we need to DIVIDE by 0.14902949

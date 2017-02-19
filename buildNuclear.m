@@ -17,6 +17,7 @@ function [mpc, offer] = buildNuclear(mpc, offer, caseInfo, verbose)
     % Initial data
     nuclearInfo = caseInfo.newNuclearInfo;
     genInfo = caseInfo.genInfo;   
+    genAf = caseInfo.genAf;
     newCap = nuclearInfo{:, 'Cap'};
 
     % Build wind
@@ -55,8 +56,7 @@ function [mpc, offer] = buildNuclear(mpc, offer, caseInfo, verbose)
     newGenindex = ones(numBus, 1);
 
     % Add new AFs
-    startCol = find(strcmp(nuclearInfo.Properties.VariableNames, 'C1')); % Starting of AF table
-    newAf = nuclearInfo{:, startCol : end};
+    newAf = repmat(genAf{fuelType, :}, numBus, 1);
 
     % Add new offer table
     newOffer(:, 1) = sum(genInfo{iGeninfo, {'Cost2Keep', 'Cost2Build', 'Tax', 'Insurance'}}, 2); % fixed cost

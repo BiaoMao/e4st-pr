@@ -103,7 +103,7 @@ classdef E4STResult < matlab.mixin.Copyable
 
             % Remove 'dl' row
             idxDl = strcmp(genRes.genTable{:, 'fuel'}, 'dl');            
-            genRes.genTable(idxDl, :) = [];  
+            genRes.genTable(idxDl, :) = [];
 
             func = @sum;
             inputVariables = {'annualGen', 'usedCap','investCap', 'shutDownCap', ...

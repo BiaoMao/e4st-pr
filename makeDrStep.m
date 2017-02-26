@@ -22,6 +22,7 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     elsty = yearInfo{'elasticity', curYear};
     disCost = caseInfo.discost;
     priceVec = caseInfo.priceVec;
+    maxPrice = 5000;
 
     % Calculate the pivot points and defualt prices
     % Convert to gen bus index first
@@ -48,6 +49,10 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     nDl = length(iDl); 
     pLoads = pLoads(iDl, 1);
     defaultPrices = defaultPrices(iDl, 1);
+
+    % Apply distribution cost to pPrice
+    defaultPrices = defaultPrices + disCost;
+    busRes.sysLMP = busRes.sysLMP + disCost;
     
     % Decide what price will be used as pivot price
     if strcmp(mode, 'annual')
@@ -67,11 +72,17 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     % use 10 steps of prices
     stepPrices = zeros(nDl, 10);
     for i = 1 : 10
-        stepPrices(:,i) = priceVec(i) .* defaultPrices; 
+        stepPrices(:, i) = priceVec(i) .* defaultPrices; 
+        if i >= 3 && i <= 9
+            stepPrices(:, i) = min(stepPrices(:, i), maxPrice);
+        end
+        if i == 10
+            stepPrices(:,10) = max(maxPrice, stepPrices(:,10)); 
+        end
     end
     % stepPrices(:,9) = max(5000, stepPrices(:,9));
-    stepPrices(:,10) = max(10000, stepPrices(:,10)); 
-    stepPrices(:, 1) = min(pPrice, stepPrices(:,1)); % prevent too high starting price    
+    % stepPrices(:,10) = max(maxPrice, stepPrices(:,10)); 
+    % stepPrices(:, 1) = min(pPrice, stepPrices(:,1)); % prevent too high starting price    
 
     % For the vertexPower, we calculate the amount of power demanded 
     % at each price in the stepPrices
@@ -82,7 +93,7 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     for i = 1 : 9
         vertexPrice(:, i) = mean([stepPrices(:, i), stepPrices(:, i + 1)], 2);
         % vertexPower(:, i) = loads .* ((stepPrices(:, i) + disCost) ./ (defaultPrices + disCost)) .^ elsty;   
-        vertexPower(:, i) = pLoads .* ((stepPrices(:, i) + disCost) ./ (pPrice + disCost)) .^ elsty;      
+        vertexPower(:, i) = pLoads .* ((stepPrices(:, i)) ./ (pPrice)) .^ elsty;      
         if ~isreal(vertexPower(:, i))
             fprintf('Huge negative price at hour %d\n', hour);
         end
@@ -92,7 +103,7 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
 
     % Now we need to calculate the total costs, or f(p) in the gencost notation
     % We need to do this iteratively, as each (Power*Price) block must be added 
-    % to the result of the previous TotalCostVector block
+    % to the result of the previous TotalCostVector block    
     totalCostVec = zeros(nDl, 10);
     for i = 9 : -1 : 1
         totalCostVec(:, i) = totalCostVec(:, i + 1) +...

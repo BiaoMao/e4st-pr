@@ -69,8 +69,8 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     for i = 1 : 10
         stepPrices(:,i) = priceVec(i) .* defaultPrices; 
     end
-    stepPrices(:,9) = max(5000, stepPrices(:,9));
-    stepPrices(:,10) = max(15000, stepPrices(:,10)); 
+    % stepPrices(:,9) = max(5000, stepPrices(:,9));
+    stepPrices(:,10) = max(10000, stepPrices(:,10)); 
     stepPrices(:, 1) = min(pPrice, stepPrices(:,1)); % prevent too high starting price    
 
     % For the vertexPower, we calculate the amount of power demanded 

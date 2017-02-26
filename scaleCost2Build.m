@@ -1,4 +1,4 @@
-function [mpc] = scaleCost2Build(mpc, caseInfo, yearInfo, year, verbose)
+function [caseInfo] = scaleCost2Build(mpc, caseInfo, yearInfo, year, verbose)
 %  Apply scalings to cost to build
 
 %   E4ST

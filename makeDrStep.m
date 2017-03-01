@@ -22,7 +22,8 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     elsty = yearInfo{'elasticity', curYear};
     disCost = caseInfo.discost;
     priceVec = caseInfo.priceVec;
-    maxPrice = 5000;
+    maxPriceVec = caseInfo.maxPriceVec;
+    % maxPriceVec = [-1 -1 4400 4500 4600 4700 4800 4900 5000 10000];
 
     % Calculate the pivot points and defualt prices
     % Convert to gen bus index first
@@ -51,8 +52,8 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     defaultPrices = defaultPrices(iDl, 1);
 
     % Apply distribution cost to pPrice
-    defaultPrices = defaultPrices + disCost;
-    busRes.sysLMP = busRes.sysLMP + disCost;
+    % defaultPrices = defaultPrices + disCost;
+    % busRes.sysLMP = busRes.sysLMP + disCost;
     
     % Decide what price will be used as pivot price
     if strcmp(mode, 'annual')
@@ -73,11 +74,11 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     stepPrices = zeros(nDl, 10);
     for i = 1 : 10
         stepPrices(:, i) = priceVec(i) .* defaultPrices; 
-        if i >= 3 && i <= 9
-            stepPrices(:, i) = min(stepPrices(:, i), maxPrice);
+        if i >= 3 && i <= 8
+            stepPrices(:, i) = min(stepPrices(:, i), maxPriceVec(i));
         end
-        if i == 10
-            stepPrices(:,10) = max(maxPrice, stepPrices(:,10)); 
+        if i >= 9 && i <= 10
+            stepPrices(:,10) = max(stepPrices(:, i), maxPriceVec(i)); 
         end
     end
     % stepPrices(:,9) = max(5000, stepPrices(:,9));
@@ -93,7 +94,7 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     for i = 1 : 9
         vertexPrice(:, i) = mean([stepPrices(:, i), stepPrices(:, i + 1)], 2);
         % vertexPower(:, i) = loads .* ((stepPrices(:, i) + disCost) ./ (defaultPrices + disCost)) .^ elsty;   
-        vertexPower(:, i) = pLoads .* ((stepPrices(:, i)) ./ (pPrice)) .^ elsty;      
+        vertexPower(:, i) = pLoads .* ((stepPrices(:, i) + disCost) ./ (pPrice + disCost)) .^ elsty;      
         if ~isreal(vertexPower(:, i))
             fprintf('Huge negative price at hour %d\n', hour);
         end

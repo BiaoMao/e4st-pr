@@ -26,7 +26,7 @@ function [mpc, contab] = makeNewDr(mpc, contab, caseInfo, yearInfo, busRes, year
 
     % Make step gencost of contab for contingency hours
     contabDr = makeContDr(mpc, caseInfo, yearInfo, busRes, year, mode, verbose);
-    contab = [contab; contabDr];
+    contab = [contab; contabDr]; 
 
     % Debug information
     if verbose == 1

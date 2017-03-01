@@ -20,12 +20,12 @@ function [caseInfo] = applyPVSubsidy(caseInfo, yearInfo, year, verbose)
     % Scale cost to build for solar
     if any(strcmp(yearInfo.Properties.RowNames, 'solarSub'))
         if idxYear == 1
-            scaling = yearInfo{'solarSub', idxYear};
+            scaling = 1 - yearInfo{'solarSub', idxYear};
         else 
-            scaling = yearInfo{'solarSub', idxYear} / yearInfo{'solarSub', idxYear - 1};
+            scaling = (1 - yearInfo{'solarSub', idxYear}) / (1 - yearInfo{'solarSub', idxYear - 1});
         end
         caseInfo.genInfo{'solar', 'Cost2Build'} = caseInfo.genInfo{'solar', 'Cost2Build'} * scaling;
         if verbose == 1
-            fprintf('Scale cost to build for solar by %f for subsidy\n', yearInfo{'solarSub', idxYear});
+            fprintf('Scale cost to build for solar by %f for subsidy per last year\n', scaling);
         end
     end

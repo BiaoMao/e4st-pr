@@ -122,9 +122,9 @@ classdef E4STResult < matlab.mixin.Copyable
             idxWind = strcmp(genRes.genTable{:, 'fuel'}, 'wind');
             totalWindSubsidy = sum(genRes.genTable{idxWind,'annualGen'}) * yearInfo{'windSub', curYear};
 
-            % Calculate solar subsidy: 30% cost2build
+            % Calculate solar subsidy: recove two multipliers
             idxSolar = strcmp(genRes.genTable{:, 'fuel'}, 'solar');
-            objSolarSubsidy = sum(genRes.genTable{idxSolar,'objCAPEX'}) * 0.3 / 0.7;
+            objSolarSubsidy = sum(genRes.genTable{idxSolar,'objCAPEX'}) * yearInfo{'solarSub', curYear} / yearInfo{'c2bSolar', curYear};
 
             % Output the summary table
             outputs = [genSum table(avgLMPtoGen, avgLMPtoLoad, totalWindSubsidy, objSolarSubsidy, objValue)];

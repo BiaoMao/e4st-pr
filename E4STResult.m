@@ -124,7 +124,8 @@ classdef E4STResult < matlab.mixin.Copyable
 
             % Calculate solar subsidy: recove two multipliers
             idxSolar = strcmp(genRes.genTable{:, 'fuel'}, 'solar');
-            objSolarSubsidy = sum(genRes.genTable{idxSolar,'objCAPEX'}) * yearInfo{'solarSub', curYear} / yearInfo{'c2bSolar', curYear};
+            objSolarSubsidy = sum(genRes.genTable{idxSolar,'objCAPEX'}) * yearInfo{'solarSub', curYear}...
+                / (1 - yearInfo{'solarSub', curYear});
 
             % Output the summary table
             outputs = [genSum table(avgLMPtoGen, avgLMPtoLoad, totalWindSubsidy, objSolarSubsidy, objValue)];

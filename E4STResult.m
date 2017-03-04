@@ -178,9 +178,10 @@ classdef E4STResult < matlab.mixin.Copyable
             co2PayToGov = multipliers{1, 1 : 2} * totalCO2';
             co2PayFromProducer = co2PayToGov;
 
-            % Full CAPEX amount, we need to DIVIDE by 0.14902949
-            fullCAPEX = sysRes{1, 'sum_objCAPEX'} / 0.14902949;
-            fullSolarSubsidy = sysRes{1, 'objSolarSubsidy'} / 0.14902949;
+            % Full CAPEX amount, we need to DIVIDE by  0.08329
+            recoverFactor = 0.08329;
+            fullCAPEX = sysRes{1, 'sum_objCAPEX'} / recoverFactor;
+            fullSolarSubsidy = sysRes{1, 'objSolarSubsidy'} / recoverFactor;
 
             % Full CAPEX amount divided by number of years
             welCAPEX = fullCAPEX / 5;

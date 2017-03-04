@@ -18,7 +18,8 @@ function [mpc, offer, caseInfo] = buildOSWind(mpc, offer, caseInfo, location, os
     windInfo = caseInfo.osWind;
     idxNew = strcmp(windInfo{:, 'location'}, location) &...
             strcmp(windInfo{:, 'size'}, oswSize);
-    newCap = windInfo{idxNew, 'cap'}(1);    
+    fprintf('Curent osw is %s and %s\n', location, oswSize);
+    newCap = windInfo{idxNew, 'cap'}(1);       
     preIdx = size(mpc.gen, 1);
 
     % Build wind

@@ -67,7 +67,7 @@ function [mpc, offer, caseInfo] = buildOSWind(mpc, offer, caseInfo, location, os
     newOffer(:, 3) = 0;
     newOffer(:, 4) = Inf;
     % Update the genInfo table
-    caseInfo.genInfo{fuelType, 'Cost2Build'} = newOffer(1, 1);
+    caseInfo.genInfo{fuelType, 'Cost2Build'} = -1; % different for each one
     caseInfo.genInfo{fuelType, 'InstallCap'} = newOffer(1, 2) ;
 
     % Update in the mpc and offer            

@@ -17,7 +17,7 @@ function [mpc, offer, caseInfo] = buildOSWind(mpc, offer, caseInfo, location, os
     % Initial data
     windInfo = caseInfo.osWind;
     idxNew = strcmp(windInfo{:, 'location'}, location) &...
-            strcmp(windInfo{:, 'size'}, oswSize);
+            strcmp(windInfo{:, 'oswSize'}, oswSize);
     fprintf('Curent osw is %s and %s\n', location, oswSize);
     newCap = windInfo{idxNew, 'cap'}(1);       
     preIdx = size(mpc.gen, 1);
@@ -67,6 +67,9 @@ function [mpc, offer, caseInfo] = buildOSWind(mpc, offer, caseInfo, location, os
     newOffer(:, 3) = 0;
     newOffer(:, 4) = Inf;
     % Update the genInfo table
+    [mInfo, nInfo] = size(caseInfo.genInfo);
+    caseInfo.genInfo{mInfo + 1, :} = zeros(1, nInfo);
+    caseInfo.genInfo.Properties.RowNames{mInfo + 1} = fuelType;
     caseInfo.genInfo{fuelType, 'Cost2Build'} = -1; % different for each one
     caseInfo.genInfo{fuelType, 'InstallCap'} = newOffer(1, 2) ;
 

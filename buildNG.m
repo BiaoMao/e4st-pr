@@ -59,6 +59,10 @@ function [mpc, offer] = buildNG(mpc, offer, caseInfo, newType, newLoc, yearInfo,
 
     % Add new gen aux data table
     newGenaux = repmat(genInfo{iGeninfo, 8 : 17}, numBus, 1);
+    % Update damage values if there are locational damages 
+    if isfield(caseInfo, 'damInfo')
+        newGenaux = updateDamage(busId, newGenaux, caseInfo);
+    end
 
     % Add new genbuilt and newgen
     newGenindex = ones(numBus, 1);

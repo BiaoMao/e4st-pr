@@ -131,6 +131,44 @@ classdef E4STResult < matlab.mixin.Copyable
             outputs = [genSum table(avgLMPtoGen, avgLMPtoLoad, totalWindSubsidy, objSolarSubsidy, objValue)];
         end
 
+         %% sumByall: summary results for the whole system
+        function [outputs] = sumBysysNoDDCC(genRes, busRes, caseInfo, yearInfo, result, year)
+            % Only pass the variables that you want to sum
+
+            % Remove 'dl' row
+            idxDl = strcmp(genRes.genTable{:, 'fuel'}, 'dl');            
+            genRes.genTable(idxDl, :) = [];
+
+            func = @sum;
+            inputVariables = {'annualGen', 'usedCap','investCap', 'shutDownCap', ...
+                            'variableCost', 'tax', 'insurance', 'costToKeep', 'objCAPEX',...
+                            'CO2', 'NOx', 'SO2', 'damCO2', 'damNOx', 'damSO2'};
+
+            % Set cost of OSW to zero
+            idxOSW = strcmp(genRes.genTable{:, 'fuel'}, 'oswind');
+            genRes.genTable{idxOSW, 'objCAPEX'} = 0;
+
+            %% Get gen summary for all
+            genSum = varfun(func, genRes.genTable, 'InputVariables', inputVariables);
+            avgLMPtoGen = genRes.genTable{:,'annualGen'}' * genRes.genTable{:,'LMPToGen'} / genSum{1, 'sum_annualGen'};
+            avgLMPtoLoad = busRes.busTable{:, 'annualLoads'}' * busRes.busTable{:, 'LMPToLoad'} / genSum{1, 'sum_annualGen'};    
+        
+            objValue = -result.opf_results.f * sum(caseInfo.hours);
+
+            % Calculate wind subsidy
+            curYear = ['Y' num2str(year)];
+            idxWind = strcmp(genRes.genTable{:, 'fuel'}, 'wind');
+            totalWindSubsidy = sum(genRes.genTable{idxWind,'annualGen'}) * yearInfo{'windSub', curYear};
+
+            % Calculate solar subsidy: recove two multipliers
+            idxSolar = strcmp(genRes.genTable{:, 'fuel'}, 'solar');
+            objSolarSubsidy = sum(genRes.genTable{idxSolar,'objCAPEX'}) * yearInfo{'solarSub', curYear}...
+                / (1 - yearInfo{'solarSub', curYear});
+
+            % Output the summary table
+            outputs = [genSum table(avgLMPtoGen, avgLMPtoLoad, totalWindSubsidy, objSolarSubsidy, objValue)];
+        end
+
         %% sumSurplusEMFWecc: sum surplus for EMF case
         function [outputs] = sumSurplusEMFWindWecc(sysRes, multipliers, qty_Multipliers, mpc, result, caseInfo)
             % Calculate surplus
@@ -176,6 +214,59 @@ classdef E4STResult < matlab.mixin.Copyable
             % Calculate CO2 payments based on cap-trade program
             numCap = length(mpc.total_output.cap);
             co2PayToGov = multipliers{1, 1 : 2} * totalCO2';
+            co2PayFromProducer = co2PayToGov;
+
+            % Full CAPEX amount, we need to DIVIDE by  0.08329
+            recoverFactor = 0.08329;
+            fullCAPEX = sysRes{1, 'sum_objCAPEX'} / recoverFactor;
+            fullSolarSubsidy = sysRes{1, 'objSolarSubsidy'} / recoverFactor;
+
+            % Full CAPEX amount divided by number of years
+            welCAPEX = fullCAPEX / 5;
+            welSolarSubsidy = fullSolarSubsidy / 5;
+
+            producerCost = sysRes{1, 'sum_variableCost'} + welCAPEX +...
+                sysRes{1, 'sum_costToKeep'} + sysRes{1, 'sum_tax'} +...
+                sysRes{1, 'sum_insurance'} + co2PayFromProducer;
+                   
+
+            govRevenue = sysRes{1,'sum_tax'} + co2PayToGov -...
+                        sysRes{1,'totalWindSubsidy'} - welSolarSubsidy;
+            
+            objProProfit = avgLMPtoGen * sysRes{1,'sum_annualGen'} -...
+                (sysRes{1, 'sum_variableCost'} + sysRes{1, 'sum_objCAPEX'} +...
+                sysRes{1, 'sum_costToKeep'} + sysRes{1, 'sum_tax'} +...
+                sysRes{1, 'sum_insurance'});
+
+            welProProfit = avgLMPtoGen * sysRes{1,'sum_annualGen'} - producerCost;
+
+            envirSurp = -sum(sysRes{1, {'sum_damCO2', 'sum_damNOx', 'sum_damSO2'}});   
+
+            merchanSurplus = sysRes{1,'sum_annualGen'} * (avgLMPtoLoad - avgLMPtoGen);
+
+            consumerSurp = sysRes{1,'objValue'} - objProProfit - merchanSurplus;
+
+            totalSurplus = sum([consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus]);
+
+            proCostWOTransfer = producerCost - govRevenue;
+
+            % Output the summary table
+            outputs = table(consumerSurp, envirSurp, welProProfit, govRevenue, merchanSurplus, totalSurplus,...
+                producerCost, proCostWOTransfer, welCAPEX, fullCAPEX, objProProfit, co2PayToGov, welSolarSubsidy);
+        end
+
+         %% sumSurplusSA: sum surplus for SA case
+        function [outputs] = sumSurplusSA(sysRes, multipliers, multiplierCO2, mpc, result, caseInfo)
+            % Calculate surplus
+            % original obj value is hourly base
+
+            % Map the result table to variable
+            avgLMPtoLoad = sysRes{1, 'avgLMPtoLoad'};
+            avgLMPtoGen = sysRes{1, 'avgLMPtoGen'};
+
+            % Calculate CO2 payments based on cap-trade program
+            numCap = length(mpc.total_output.cap);
+            co2PayToGov = multipliers{1, 1} * multiplierCO2';
             co2PayFromProducer = co2PayToGov;
 
             % Full CAPEX amount, we need to DIVIDE by  0.08329

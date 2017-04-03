@@ -67,9 +67,12 @@ function [mpc, offer, caseInfo] = buildOSWind(mpc, offer, caseInfo, location, os
     newOffer(:, 3) = 0;
     newOffer(:, 4) = Inf;
     % Update the genInfo table
-    [mInfo, nInfo] = size(caseInfo.genInfo);
-    caseInfo.genInfo{mInfo + 1, :} = zeros(1, nInfo);
-    caseInfo.genInfo.Properties.RowNames{mInfo + 1} = fuelType;
+    % Add one row for oswind in genInfo if necessary
+    if ~any(strcmp(caseInfo.genInfo.Properties.RowNames, fuelType))
+        [mInfo, nInfo] = size(caseInfo.genInfo);
+        caseInfo.genInfo{mInfo + 1, :} = zeros(1, nInfo);
+        caseInfo.genInfo.Properties.RowNames{mInfo + 1} = fuelType;
+    end
     caseInfo.genInfo{fuelType, 'Cost2Build'} = -1; % different for each one
     caseInfo.genInfo{fuelType, 'InstallCap'} = newOffer(1, 2) ;
 

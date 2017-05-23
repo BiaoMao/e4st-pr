@@ -50,7 +50,14 @@ function genRes = getGenRes(mpc, offer, result, caseInfo, yearInfo, year)
     % caseInfo.nHours = sum(caseInfo.hours);
     CO2 = mpc.gen_aux_data(:,1) .* annualGen;
     NOx = mpc.gen_aux_data(:,2) .* annualGen;
-    SO2 = mpc.gen_aux_data(:,3) .* annualGen;    
+    SO2 = mpc.gen_aux_data(:,3) .* annualGen;   
+
+    %  Calculate used ng in mmBtu
+    % 8-th column is the heat rate
+    usedNg = annualGen .* mpc.gen_aux_data(:,8) / 10^6; 
+    idxNg = strcmp(mpc.genfuel, 'ng') | strcmp(mpc.genfuel, 'ngcc') | ...
+            strcmp(mpc.genfuel, 'ngt') | strcmp(mpc.genfuel, 'ngccccs');
+    usedNg(~idxNg, :) = 0;
 
     % Calculate damages     
     isNewgen = mpc.newgen == 1;
@@ -104,7 +111,7 @@ function genRes = getGenRes(mpc, offer, result, caseInfo, yearInfo, year)
 
     % Combine table
     genRes.genTable = [genRes.genTable table(annualGen, usedCap, shutDownCap, investCap, fixedCost, variableCost,...
-                    costToKeep, objCAPEX, tax, insurance, CO2, NOx, SO2, damCO2, damNOx, damSO2, LMPToGen)];   
+                    costToKeep, objCAPEX, tax, insurance, CO2, NOx, SO2, damCO2, damNOx, damSO2, LMPToGen, usedNg)];   
 
     % Set the dl values to zero
     idxDl = strcmp(genRes.genTable{:,'fuel'}, 'dl');

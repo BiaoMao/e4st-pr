@@ -78,7 +78,7 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
             stepPrices(:, i) = min(stepPrices(:, i), maxPriceVec(i));
         end
         if i >= 9 && i <= 10
-            stepPrices(:,10) = max(stepPrices(:, i), maxPriceVec(i)); 
+            stepPrices(:, i) = max(stepPrices(:, i), maxPriceVec(i)); 
         end
     end
     % stepPrices(:,9) = max(5000, stepPrices(:,9));

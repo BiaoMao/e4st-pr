@@ -61,6 +61,8 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     elseif strcmp(mode, 'hourly')
         pPrice = defaultPrices;
     end
+    % Add the distribution cost to pivot price
+    pPrice = pPrice + disCost;
 
     % Calculate the starting point: [loads, basePrices] 
     % loads = pLoads .* ((defaultPrices + disCost) ./ (pPrice + disCost)).^elsty;
@@ -73,12 +75,13 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     % use 10 steps of prices
     stepPrices = zeros(nDl, 10);
     for i = 1 : 10
-        stepPrices(:, i) = priceVec(i) .* defaultPrices; 
-        if i >= 3 && i <= 8
+        % Step priecs are percentages of retail prices (60 + wholesale prices)
+        stepPrices(:, i) = priceVec(i) .* (defaultPrices + disCost); 
+        if i >= 1 && i <= 8
             stepPrices(:, i) = min(stepPrices(:, i), maxPriceVec(i));
         end
         if i >= 9 && i <= 10
-            stepPrices(:,10) = max(stepPrices(:, i), maxPriceVec(i)); 
+            stepPrices(:, i) = max(stepPrices(:, i), maxPriceVec(i)); 
         end
     end
     % stepPrices(:,9) = max(5000, stepPrices(:,9));
@@ -93,8 +96,7 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     vertexPrice = stepPrices;
     for i = 1 : 9
         vertexPrice(:, i) = mean([stepPrices(:, i), stepPrices(:, i + 1)], 2);
-        % vertexPower(:, i) = loads .* ((stepPrices(:, i) + disCost) ./ (defaultPrices + disCost)) .^ elsty;   
-        vertexPower(:, i) = pLoads .* ((stepPrices(:, i) + disCost) ./ (pPrice + disCost)) .^ elsty;      
+        vertexPower(:, i) = pLoads .* ((stepPrices(:, i)) ./ (pPrice)) .^ elsty;      
         if ~isreal(vertexPower(:, i))
             fprintf('Huge negative price at hour %d\n', hour);
         end

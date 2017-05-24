@@ -109,8 +109,9 @@ function gencost = makeDrStep(mpc, caseInfo, yearInfo, busRes, hour, year, mode,
     % to the result of the previous TotalCostVector block    
     totalCostVec = zeros(nDl, 10);
     for i = 9 : -1 : 1
+        % Subtract distribution cost from vertexPrice
         totalCostVec(:, i) = totalCostVec(:, i + 1) +...
-            (vertexPower(:, i) - vertexPower(:, i + 1)) .* vertexPrice(:, i);                                          
+            (vertexPower(:, i) - vertexPower(:, i + 1)) .* (vertexPrice(:, i) - disCost);                                          
     end
 
     % Finally, we export the resultant gencost

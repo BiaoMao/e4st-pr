@@ -113,7 +113,7 @@ classdef E4STResult < matlab.mixin.Copyable
             %% Get gen summary for all
             genSum = varfun(func, genRes.genTable, 'InputVariables', inputVariables);
             avgLMPtoGen = genRes.genTable{:,'annualGen'}' * genRes.genTable{:,'LMPToGen'} / genSum{1, 'sum_annualGen'};
-            avgLMPtoLoad = busRes.busTable{:, 'annualLoads'}' * busRes.busTable{:, 'LMPToLoad'} / genSum{1, 'sum_annualGen'};    
+            avgLMPtoLoad = busRes.busTable{:, 'annualLoads'}' * busRes.busTable{:, 'LMPToLoad'} / sum(busRes.busTable{:, 'annualLoads'});    
             
             % Get sum of loads
             totalLoad = sum(busRes.busTable{:, 'annualLoads'});

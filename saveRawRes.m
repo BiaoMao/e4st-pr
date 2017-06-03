@@ -1,4 +1,4 @@
-function saveRawRes(fileName, mpc, offer, result, caseInfo, yearInfo)
+function saveRawRes(fileName, mpc, offer, contab, result, caseInfo, yearInfo)
 %% updateDamage: update locational damages for NOx and SO2
 %
 %   E4ST
@@ -13,5 +13,5 @@ function saveRawRes(fileName, mpc, offer, result, caseInfo, yearInfo)
     fVal = result.(curYear).opf_results.f;
     result.(curYear).opf_results = [];
     result.(curYear).opf_results.f = fVal;
-    save(fileName, 'mpc', 'offer', 'result', 'caseInfo', 'yearInfo', '-v7.3');
+    save(fileName, 'mpc', 'offer', 'contab', 'result', 'caseInfo', 'yearInfo', '-v7.3');
 end

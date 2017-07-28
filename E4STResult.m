@@ -108,7 +108,7 @@ classdef E4STResult < matlab.mixin.Copyable
             func = @sum;
             inputVariables = {'annualGen', 'usedCap','investCap', 'shutDownCap', ...
                             'variableCost', 'tax', 'insurance', 'costToKeep', 'objCAPEX',...
-                            'CO2', 'NOx', 'SO2', 'damCO2', 'damNOx', 'damSO2', 'usedNg'};
+                            'CO2', 'NOx', 'SO2', 'damCO2', 'damNOx', 'damSO2', 'usedNg', 'usedCoal'};
 
             %% Get gen summary for all
             genSum = varfun(func, genRes.genTable, 'InputVariables', inputVariables);
